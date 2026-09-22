@@ -1,5 +1,7 @@
 package game
 
+import "encoding/json"
+
 // Table represent the list of card pairs on table
 type Table struct {
 	pairs []*TablePair
@@ -13,6 +15,25 @@ type TablePair struct {
 	Defense  *Card
 	Attacker *Player
 	Defender *Player
+}
+
+type tablePairJSON struct {
+	Attack     *Card  `json:"attack"`
+	Defense    *Card  `json:"defense"`
+	AttackerID string `json:"attacker_id"`
+	DefenderID string `json:"defender_id,omitempty"`
+}
+
+// MarshalJSON serializes pair with IDs of players instead of full player state
+func (tp TablePair) MarshalJSON() ([]byte, error) {
+	pair := tablePairJSON{Attack: tp.Attack, Defense: tp.Defense}
+	if tp.Attacker != nil {
+		pair.AttackerID = tp.Attacker.ID
+	}
+	if tp.Defender != nil {
+		pair.DefenderID = tp.Defender.ID
+	}
+	return json.Marshal(pair)
 }
 
 func (t *Table) GetCardsOnTable() []*Card {

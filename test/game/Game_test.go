@@ -28,7 +28,7 @@ func TestAttackFailWithTooManyCards(t *testing.T) {
 	}
 	err := g.Attack(players[0], c)
 
-	if err.Error() != game.ErrorAttackIsTooBig {
+	if err == nil || err.Error() != game.ErrorAttackIsTooBig {
 		t.Error("Attack should fail with too many cards")
 	}
 }
@@ -75,7 +75,7 @@ func TestAttackFailWithTooManyAddedCards(t *testing.T) {
 	err = g.Attack(players[2], []*game.Card{
 		players[2].GetCards()[0],
 	})
-	if err.Error() != game.ErrorAttackIsTooBig {
+	if err == nil || err.Error() != game.ErrorAttackIsTooBig {
 		t.Error("Adding should fail with too many cards")
 	}
 }
@@ -85,7 +85,7 @@ func TestStartGameWhenDealExhaustsDeck(t *testing.T) {
 	for i := 0; i < 6; i++ {
 		players = append(players, &game.Player{Name: "Player"})
 	}
-	options := map[string]game.Option{"min_rank": {Value: "6"}}
+	options := map[string]game.Option{game.OptionMinRank: {Value: "6"}}
 	g := game.NewGame(&game.Deck{}, players, options, false, false, game.Table{}, nil)
 
 	if err := g.StartGame(); err != nil {
@@ -162,7 +162,7 @@ func newRedirectGame() (*game.Game, []*game.Player) {
 			{Suit: game.Spades, Rank: game.Jack},
 		}, false, false),
 	}
-	options := map[string]game.Option{"with_redirect": {Value: "1"}}
+	options := map[string]game.Option{game.OptionRedirect: {Value: "1"}}
 	g := game.NewGame(game.NewDeck([]*game.Card{}, &game.Card{Suit: game.Spades, Rank: game.King}), players, options, true, false, game.Table{}, &game.BotManager{})
 	return g, players
 }
@@ -363,6 +363,9 @@ func TestGameOverInDraw(t *testing.T) {
 	if !g.IsOver() {
 		t.Fatal("Expected game to be over when all players run out of cards")
 	}
+	if players[0].IsLoser() || players[1].IsLoser() {
+		t.Error("Expected no loser in a draw")
+	}
 	if lastEventType(g) != game.GameOverEventType {
 		t.Error("Expected game over event to be logged")
 	}
@@ -376,4 +379,21 @@ func TestRedirectFailWithNoPlayerToRedirectTo(t *testing.T) {
 	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
 
 	expectError(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Spades)}), game.ErrorNoPlayerToRedirect)
+}
+
+func TestGetOptionsReturnsCopy(t *testing.T) {
+	g, _ := newTestGame(map[string]game.Option{game.OptionRedirect: {Value: "1"}},
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Seven, game.Clubs)},
+	)
+
+	options := g.GetOptions()
+	if options[game.OptionRedirect].Value != "1" {
+		t.Error("Expected options set during creation")
+	}
+
+	options[game.OptionRedirect] = game.Option{Value: "0"}
+	if g.GetOption(game.OptionRedirect).Value != "1" {
+		t.Error("Expected changes to returned options not to affect game")
+	}
 }

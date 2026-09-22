@@ -100,7 +100,7 @@ func (g *Game) refillUserCards(player *Player) {
 		addedCards = append(addedCards, *card)
 	}
 	if len(addedCards) > 0 {
-		g.Log.Add(NewRefillEvent(*player, addedCards))
+		g.Log.Add(NewRefillEvent(player.snapshot(), addedCards))
 	}
 }
 
@@ -173,9 +173,6 @@ func (g *Game) SelectFirstAttacker() {
 
 // selectDefender chooses user to the left of Attacker
 func (g *Game) selectDefender() {
-	//TODO do game over if Attacker is nil
-	//TODO do game over if Defender is nil
-	// TODO.. not necessary anymore
 	index, _ := g.getAttacker()
 
 	_, defender := g.getActivePlayerToTheLeft(index)
@@ -256,8 +253,6 @@ func (g *Game) returnCard(p *Player, c *Card) {
 }
 
 // detectWinners finds players that have no Cards but still in game
-//
-// TODO see refactoring notes in g.winPlayer
 func (g *Game) detectWinners() {
 	for _, player := range g.players {
 		if player.quitGame {

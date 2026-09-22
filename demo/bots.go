@@ -24,12 +24,12 @@ func main() {
 
 	// allow redirects and throw-ins by neighbors
 	options := map[string]game.Option{}
-	options["with_redirect"] = game.Option{Value: "1", Exposed: true}
+	options[game.OptionRedirect] = game.Option{Value: "1", Exposed: true}
 	options[game.OptionThrowIn] = game.Option{Value: "1", Exposed: true}
 
 	// 36 cards, least rank is 6
 	r := game.Six
-	options["min_rank"] = game.Option{Value: r.ToString(), Exposed: true}
+	options[game.OptionMinRank] = game.Option{Value: r.ToString(), Exposed: true}
 
 	// build the Bot Manager that takes care of bots actions
 	botManager := game.NewBotManager(bots)

@@ -11,7 +11,6 @@ const (
 	EndTurnEventType  = "end_turn"
 	GameOverEventType = "game_over"
 	AbandonEventType  = "abandon"
-	//todo add other Events like Card spread and refills
 )
 
 type Log struct {

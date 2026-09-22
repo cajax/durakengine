@@ -2,6 +2,8 @@ package game
 
 import (
 	"errors"
+	"maps"
+	"slices"
 )
 
 const (
@@ -41,8 +43,7 @@ func (g *Game) StartGame() error {
 	if len(g.players) > 6 {
 		return errors.New(ErrorTooManyPlayers)
 	}
-	// TODO move option name to constant
-	minRank := RankFromString(g.GetOption("min_rank").Value)
+	minRank := RankFromString(g.GetOption(OptionMinRank).Value)
 	g.initTable(minRank)
 	return nil
 }
@@ -63,7 +64,7 @@ func (g *Game) initTable(minRank Rank) {
 
 	_, attacker := g.getAttacker()
 	_, defender := g.GetDefender()
-	g.Log.Add(NewStartEvent(g.deck.GetCount(), minRank, *attacker, *defender, *g.deck.trumpSuit, g.options))
+	g.Log.Add(NewStartEvent(g.deck.GetCount(), minRank, attacker.snapshot(), defender.snapshot(), *g.deck.trumpSuit, maps.Clone(g.options)))
 }
 
 // Attack player if is one of attacker
@@ -109,18 +110,17 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 
 	// From here on we no longer expect errors
 	g.advanceSequence()
-	g.Log.Add(NewAttackEvent(*p, cards))
 
 	for _, c := range cards {
 		g.table.attack(p, c)
 		p.removeCard(c)
 	}
+	g.Log.Add(NewAttackEvent(p.snapshot(), slices.Clone(cards)))
 
 	return nil
 }
 
 // Defend against cards on table if defender
-// todo replace tp by index of tp
 func (g *Game) Defend(p *Player, i int, c *Card) error {
 	if !g.inProgress() {
 		return errors.New(ErrorNotInPlayingState)
@@ -149,9 +149,9 @@ func (g *Game) Defend(p *Player, i int, c *Card) error {
 
 	// From here on we no longer expect errors
 	g.advanceSequence()
-	g.Log.Add(NewDefenseEvent(*p, *tp, *c))
 	g.table.defend(p, tp, c)
 	p.removeCard(c)
+	g.Log.Add(NewDefenseEvent(p.snapshot(), *tp, *c))
 	return nil
 }
 
@@ -167,12 +167,12 @@ func (g *Game) Pickup(p *Player) error {
 
 	//From here on we no longer expect errors
 	g.advanceSequence()
-	g.Log.Add(NewPickupEvent(*p, g.table.GetCardsOnTable()))
 
 	p.addCards(g.table.GetCardsOnTable())
+	g.Log.Add(NewPickupEvent(p.snapshot(), g.table.GetCardsOnTable()))
 	g.table.clear()
 	// defender loses the turn
-	g.endTurn(g.GetPlayerIndex(p) + 1)
+	g.endTurn(g.GetPlayerIndex(p)+1, p)
 	return nil
 }
 
@@ -195,12 +195,12 @@ func (g *Game) EndAttack(p *Player) error {
 
 	// From here on we no longer expect errors
 	g.advanceSequence()
-	g.Log.Add(NewDiscardEvent(*p, g.table.GetCardsOnTable()))
+	g.Log.Add(NewDiscardEvent(p.snapshot(), g.table.GetCardsOnTable()))
 
 	g.table.clear()
 
 	defenderIndex, _ := g.GetDefender()
-	g.endTurn(defenderIndex)
+	g.endTurn(defenderIndex, nil)
 
 	return nil
 }
@@ -211,8 +211,7 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 		return errors.New(ErrorNotInPlayingState)
 	}
 
-	// todo option name to constant
-	if g.GetOption("with_redirect").Value != "1" {
+	if g.GetOption(OptionRedirect).Value != "1" {
 		return errors.New(ErrorNoRedirectsAllowed)
 	}
 
@@ -265,7 +264,6 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 
 	//From here on we no longer expect errors
 	g.advanceSequence()
-	g.Log.Add(NewTransferEvent(*defender, cards, *nextDefender, keepCards))
 
 	for _, card := range cards {
 		if keepCards {
@@ -278,6 +276,7 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 
 	g.setAttacker(defender)
 	g.setDefender(nextDefender)
+	g.Log.Add(NewTransferEvent(defender.snapshot(), slices.Clone(cards), nextDefender.snapshot(), keepCards))
 
 	return nil
 }
@@ -293,19 +292,18 @@ func (g *Game) Abandon(player *Player) error {
 	}
 
 	g.advanceSequence()
-	g.Log.Add(NewAbandonEvent(*player, player.cards))
 
+	cards := player.cards
 	player.quitGame = true
 	player.abandonedGame = true
-	if len(player.cards) > 0 {
-		for _, card := range player.cards {
-			g.deck.AddCard(card)
-		}
-		player.cards = nil
+	for _, card := range cards {
+		g.deck.AddCard(card)
 	}
+	player.cards = nil
+	g.Log.Add(NewAbandonEvent(player.snapshot(), cards))
 	if player.IsAttacker() || player.IsDefender() {
 		g.cancelTurn()
-		g.endTurn(g.GetPlayerIndex(player) + 1)
+		g.endTurn(g.GetPlayerIndex(player)+1, nil)
 	}
 
 	return nil
