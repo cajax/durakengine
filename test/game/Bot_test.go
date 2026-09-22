@@ -60,3 +60,73 @@ func TestSelectLeastCardThatBeatOtherFail(t *testing.T) {
 		t.Error("There is no card that can beat the other")
 	}
 }
+
+func TestBotAttacksWithLeastNonTrump(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Hearts), card(game.Nine, game.Clubs), card(game.Seven, game.Spades)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Spades)},
+	)
+	b := game.Bot{Player: p[0]}
+
+	if !b.Act(g) {
+		t.Fatal("Expected bot to attack")
+	}
+
+	cards := g.GetTable().GetCardsToBeat()
+	if len(cards) != 1 || *cards[0] != *card(game.Seven, game.Spades) {
+		t.Errorf("Expected bot to attack with 7♠, got %v", cards)
+	}
+}
+
+func TestBotDefends(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Seven, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Hearts), card(game.Ace, game.Clubs), card(game.Nine, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	b := game.Bot{Player: p[1]}
+
+	if !b.Act(g) {
+		t.Fatal("Expected bot to defend")
+	}
+
+	pairs := g.GetTable().GetPairs()
+	if len(pairs) != 1 || pairs[0].Defense == nil || *pairs[0].Defense != *card(game.Nine, game.Clubs) {
+		t.Error("Expected bot to defend with 9♣")
+	}
+}
+
+func TestBotPicksUpWhenCannotDefend(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Seven, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Ace, game.Spades)},
+		[]*game.Card{card(game.Ten, game.Diamonds)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	b := game.Bot{Player: p[1]}
+
+	if !b.Act(g) {
+		t.Fatal("Expected bot to pick up")
+	}
+	if !g.GetTable().IsEmpty() || !hasCard(p[1].GetCards(), card(game.Seven, game.Clubs)) {
+		t.Error("Expected bot to pick up cards from table")
+	}
+}
+
+func TestBotEndsAttackWhenAllCardsBeaten(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Seven, game.Clubs), card(game.Ace, game.Spades)},
+		[]*game.Card{card(game.Nine, game.Clubs), card(game.Six, game.Diamonds)},
+		[]*game.Card{card(game.Ten, game.Diamonds)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Seven, game.Clubs)}))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Nine, game.Clubs)))
+	b := game.Bot{Player: p[0]}
+
+	if !b.Act(g) {
+		t.Fatal("Expected bot to end attack")
+	}
+	if !g.GetTable().IsEmpty() || !p[1].IsAttacker() {
+		t.Error("Expected turn to pass to defender")
+	}
+}
