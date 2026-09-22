@@ -51,7 +51,7 @@ func (g *Game) initTable(minRank Rank) {
 
 	g.table = Table{}
 	g.table.clear()
-	g.deck = Deck{}
+	g.deck = Deck{rng: g.rng}
 
 	g.deck.ResetDeck(minRank)
 	g.SpreadCards()

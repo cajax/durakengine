@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"math/rand/v2"
 )
 
 // Game state
@@ -13,6 +14,7 @@ type Game struct {
 	over       bool
 	table      Table
 	botManager *BotManager
+	rng        *rand.Rand
 	Log        Log
 }
 
@@ -45,6 +47,16 @@ func (g *Game) GetSequence() int {
 }
 
 // GAME ACTIONS
+
+// SetRandom sets source of randomness for shuffling and choosing first attacker.
+// Global source is used if nil. Use seeded source to make games reproducible
+func (g *Game) SetRandom(r *rand.Rand) error {
+	if g.IsStarted() {
+		return errors.New(ErrorGameAlreadyStarted)
+	}
+	g.rng = r
+	return nil
+}
 
 // SetPlayers sets list of players to game
 func (g *Game) SetPlayers(players []*Player) error {

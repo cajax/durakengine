@@ -1,6 +1,8 @@
 package game
 
 import (
+	"math/rand/v2"
+	"slices"
 	"testing"
 
 	"github.com/cajax/durakengine/pkg/game"
@@ -82,4 +84,32 @@ func TestStartGameSelectsAttackerWithLeastTrump(t *testing.T) {
 			t.Fatal("Expected player with the least trump to attack first")
 		}
 	}
+}
+
+func TestSeededGamesAreReproducible(t *testing.T) {
+	hands := func(seed uint64) [][]game.Card {
+		g := newUnstartedGame(3)
+		mustSucceed(t, g.SetRandom(rand.New(rand.NewPCG(seed, 0))))
+		mustSucceed(t, g.StartGame())
+		var hands [][]game.Card
+		for _, p := range g.GetPlayers() {
+			var hand []game.Card
+			for _, c := range p.GetCards() {
+				hand = append(hand, *c)
+			}
+			hands = append(hands, hand)
+		}
+		return hands
+	}
+
+	a, b := hands(42), hands(42)
+	for i := range a {
+		if !slices.Equal(a[i], b[i]) {
+			t.Fatal("Expected same deal with same seed")
+		}
+	}
+
+	g := newUnstartedGame(2)
+	mustSucceed(t, g.StartGame())
+	expectError(t, g.SetRandom(nil), game.ErrorGameAlreadyStarted)
 }
