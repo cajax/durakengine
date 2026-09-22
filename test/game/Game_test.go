@@ -289,3 +289,23 @@ func countCards(g *game.Game) int {
 	}
 	return n
 }
+
+func TestGetPairs(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Six, game.Spades)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Eight, game.Clubs)))
+
+	pairs := g.GetPairs()
+	if len(pairs) != 2 {
+		t.Fatalf("Expected 2 pairs, got %d", len(pairs))
+	}
+	if *pairs[0].Attack != *card(game.Six, game.Clubs) || *pairs[0].Defense != *card(game.Eight, game.Clubs) {
+		t.Error("Expected first pair to be 6♣ beaten by 8♣")
+	}
+	if *pairs[1].Attack != *card(game.Six, game.Spades) || pairs[1].Defense != nil {
+		t.Error("Expected second pair to be unbeaten 6♠")
+	}
+}

@@ -130,7 +130,7 @@ func (g *Game) GetDeck() Deck {
 }
 
 func (g *Game) GetPairs() []TablePair {
-	pairs := make([]TablePair, len(g.table.pairs))
+	pairs := make([]TablePair, 0, len(g.table.pairs))
 	for _, pair := range g.table.pairs {
 		pairs = append(pairs, *pair)
 	}
