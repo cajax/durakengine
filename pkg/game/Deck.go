@@ -15,6 +15,11 @@ type Deck struct {
 
 const ErrorDeckNoTrump = "No trump card in deck"
 
+// deckSize returns number of cards in deck starting from given rank
+func deckSize(leastRank Rank) int {
+	return int(Ace+1-leastRank) * 4
+}
+
 // NewDeck makes deck with predefined values for testing. Cards are drawn in given order
 func NewDeck(cards []*Card, trump *Card) *Deck {
 	return &Deck{cards: cards, trump: trump, trumpSuit: &trump.Suit}
@@ -53,7 +58,7 @@ func (d *Deck) GetCount() int {
 
 // ResetDeck refills deck with shuffled cards
 func (d *Deck) ResetDeck(leastRank Rank) {
-	d.cards = make([]*Card, 0, (Ace+1-leastRank)*4)
+	d.cards = make([]*Card, 0, deckSize(leastRank))
 
 	for rank := leastRank; rank <= Ace; rank++ {
 		for suit := Hearts; suit <= Diamonds; suit++ {

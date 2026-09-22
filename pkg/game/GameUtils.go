@@ -91,7 +91,7 @@ func (g *Game) refillUserCards(player *Player) {
 		return
 	}
 	var addedCards []Card
-	for i := len(player.cards); i < 6; i++ {
+	for i := len(player.cards); i < handSize; i++ {
 		card := g.deck.GetCard()
 		if card == nil {
 			break
@@ -105,8 +105,6 @@ func (g *Game) refillUserCards(player *Player) {
 }
 
 // SpreadCards fills each players hands with cards
-//
-// todo rework to spread evenly. E.g with 7 players last player will have 0
 func (g *Game) SpreadCards() {
 	for i := range g.players {
 		g.refillUserCards(g.players[i])
