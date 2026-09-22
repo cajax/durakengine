@@ -134,31 +134,38 @@ func TestBotEndsAttackWhenAllCardsBeaten(t *testing.T) {
 func TestBotsPlayFullGames(t *testing.T) {
 	for n := 2; n <= 6; n++ {
 		for _, redirect := range []string{"0", "1"} {
-			finished := 0
-			games := 100
-			for i := 0; i < games; i++ {
-				var players []*game.Player
-				var bots []*game.Bot
-				for j := 0; j < n; j++ {
-					p := &game.Player{Name: "Bot"}
-					players = append(players, p)
-					bots = append(bots, &game.Bot{Player: p})
-				}
-				options := map[string]game.Option{"min_rank": {Value: "6"}, "with_redirect": {Value: redirect}}
-				g := game.NewGame(&game.Deck{}, players, options, false, false, game.Table{}, game.NewBotManager(bots))
-				mustSucceed(t, g.StartGame())
-
-				g.CycleBots()
-
-				if g.IsOver() {
-					finished++
-				}
-			}
-			// bots can rarely end up repeating the same position
-			if finished < games*95/100 {
-				t.Errorf("%d players, redirect %s: only %d of %d games finished", n, redirect, finished, games)
+			for _, limit := range []string{"0", "6"} {
+				testBotGames(t, n, redirect, limit)
 			}
 		}
+	}
+}
+
+func testBotGames(t *testing.T, n int, redirect string, limit string) {
+	t.Helper()
+	finished := 0
+	games := 100
+	for i := 0; i < games; i++ {
+		var players []*game.Player
+		var bots []*game.Bot
+		for j := 0; j < n; j++ {
+			p := &game.Player{Name: "Bot"}
+			players = append(players, p)
+			bots = append(bots, &game.Bot{Player: p})
+		}
+		options := map[string]game.Option{"min_rank": {Value: "6"}, "with_redirect": {Value: redirect}, game.OptionMaxAttackCards: {Value: limit}}
+		g := game.NewGame(&game.Deck{}, players, options, false, false, game.Table{}, game.NewBotManager(bots))
+		mustSucceed(t, g.StartGame())
+
+		g.CycleBots()
+
+		if g.IsOver() {
+			finished++
+		}
+	}
+	// bots can rarely end up repeating the same position
+	if finished < games*95/100 {
+		t.Errorf("%d players, redirect %s, limit %s: only %d of %d games finished", n, redirect, limit, finished, games)
 	}
 }
 

@@ -29,6 +29,7 @@ const (
 	ErrorRedirectRankMismatch            = "Redirect card does not match rank on table"
 	ErrorPlayerAlreadyQuit               = "Player already quit"
 	ErrorNoPlayerToRedirect              = "No player to redirect to"
+	ErrorAttackLimitReached              = "Attacking with more cards than allowed per turn"
 )
 
 func (g *Game) StartGame() error {
@@ -95,6 +96,10 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 
 	if len(defender.cards) < len(cards)+len(g.table.GetCardsToBeat()) {
 		return errors.New(ErrorAttackIsTooBig)
+	}
+
+	if !g.withinAttackLimit(len(cards)) {
+		return errors.New(ErrorAttackLimitReached)
 	}
 
 	if !p.hasCards(cards) {
@@ -238,6 +243,10 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 
 	if len(nextDefender.cards) < len(g.table.GetCardsOnTable())+len(cards) {
 		return errors.New(ErrorAttackIsTooBig)
+	}
+
+	if !g.withinAttackLimit(len(cards)) {
+		return errors.New(ErrorAttackLimitReached)
 	}
 
 	//From here on we no longer expect errors

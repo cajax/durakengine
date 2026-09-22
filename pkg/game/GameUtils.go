@@ -2,6 +2,7 @@ package game
 
 import (
 	"math/rand"
+	"strconv"
 )
 
 /**************************************************
@@ -122,6 +123,31 @@ func (g *Game) SetOption(id string, option Option) {
 // GetOption returns game option
 func (g *Game) GetOption(id string) Option {
 	return g.options[id]
+}
+
+// maxAttackCards returns number of attack cards allowed per turn, 0 if unlimited
+func (g *Game) maxAttackCards() int {
+	limit, err := strconv.Atoi(g.GetOption(OptionMaxAttackCards).Value)
+	if err != nil || limit < 0 {
+		return 0
+	}
+	return limit
+}
+
+// withinAttackLimit checks if n more attack cards can be put on table in current turn
+func (g *Game) withinAttackLimit(n int) bool {
+	limit := g.maxAttackCards()
+	return limit == 0 || len(g.table.pairs)+n <= limit
+}
+
+// attackCapacity returns how many more cards can be added to attack in current turn
+func (g *Game) attackCapacity() int {
+	_, defender := g.GetDefender()
+	capacity := len(defender.cards) - len(g.table.GetCardsToBeat())
+	if limit := g.maxAttackCards(); limit > 0 {
+		capacity = min(capacity, limit-len(g.table.pairs))
+	}
+	return max(capacity, 0)
 }
 
 // SelectFirstAttacker find Player with the least trump, or random if none

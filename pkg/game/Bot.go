@@ -106,8 +106,7 @@ func (b *Bot) attack(g *Game) bool {
 }
 
 func (b *Bot) getLeastValuedCardsForAttack(g *Game) []*Card {
-	_, d := g.GetDefender()
-	maxCards := len(d.cards)
+	maxCards := g.attackCapacity()
 	//regular Cards
 	cards := b.selectLeastValuedRank(b.groupCardsByRank(b.selectNonTrumps(b.Player.cards, g.deck.trumpSuit)), maxCards)
 
@@ -124,8 +123,7 @@ func (b *Bot) getLeastValuedCardsForAttack(g *Game) []*Card {
 }
 
 func (b *Bot) getLeastValuedCardsToAdd(g *Game) []*Card {
-	_, d := g.GetDefender()
-	maxCards := len(d.cards)
+	maxCards := g.attackCapacity()
 	return b.selectLeastValuedRank(b.groupCardsByRank(b.selectMatchingTable(b.selectNonTrumps(b.Player.cards, g.deck.trumpSuit), g.table.GetCardsOnTable())), maxCards)
 }
 
