@@ -202,6 +202,10 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 		return errors.New(ErrorRedirectWithNoOrMixedCards)
 	}
 
+	if !defender.hasCards(cards) {
+		return errors.New(ErrorDefenderHasNoCard)
+	}
+
 	if g.table.defenseStarted() {
 		return errors.New(ErrorAlreadyDefending)
 	}
@@ -222,6 +226,7 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 
 	for _, card := range cards {
 		g.table.attack(defender, card)
+		defender.removeCard(card)
 	}
 
 	g.setAttacker(defender)

@@ -143,3 +143,58 @@ func TestAttackFailWithDuplicateCard(t *testing.T) {
 		t.Error("Table should stay empty after a rejected attack")
 	}
 }
+
+func newRedirectGame() (*game.Game, []*game.Player) {
+	players := []*game.Player{
+		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{
+			{Suit: game.Clubs, Rank: game.Six},
+		}, false, true),
+		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{
+			{Suit: game.Hearts, Rank: game.Six},
+			{Suit: game.Clubs, Rank: game.Ace},
+		}, true, false),
+		game.NewPlayer("3", false, false, false, "Next defender", []*game.Card{
+			{Suit: game.Spades, Rank: game.Ten},
+			{Suit: game.Spades, Rank: game.Jack},
+		}, false, false),
+	}
+	options := map[string]game.Option{"with_redirect": {Value: "1"}}
+	g := game.NewGame(game.NewDeck([]*game.Card{}, &game.Card{Suit: game.Spades, Rank: game.King}), players, options, true, false, game.Table{}, &game.BotManager{})
+	return g, players
+}
+
+func TestRedirectRemovesCardFromHand(t *testing.T) {
+	g, players := newRedirectGame()
+	if err := g.Attack(players[0], players[0].GetCards()); err != nil {
+		t.Fatal(err)
+	}
+
+	sixHearts := players[1].GetCards()[0]
+	if err := g.Redirect(players[1], []*game.Card{sixHearts}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, c := range players[1].GetCards() {
+		if c.Rank == sixHearts.Rank && c.Suit == sixHearts.Suit {
+			t.Error("Redirected card should be removed from defender's hand")
+		}
+	}
+	if len(g.GetTable().GetPairs()) != 2 {
+		t.Error("Expected 2 cards on table after redirect")
+	}
+	if !players[2].IsDefender() {
+		t.Error("Expected next player to become defender")
+	}
+}
+
+func TestRedirectFailWithCardNotInHand(t *testing.T) {
+	g, players := newRedirectGame()
+	if err := g.Attack(players[0], players[0].GetCards()); err != nil {
+		t.Fatal(err)
+	}
+
+	err := g.Redirect(players[1], []*game.Card{{Suit: game.Diamonds, Rank: game.Six}})
+	if err == nil || err.Error() != game.ErrorDefenderHasNoCard {
+		t.Errorf("Redirect with a card not in hand should fail with %q, got %v", game.ErrorDefenderHasNoCard, err)
+	}
+}
