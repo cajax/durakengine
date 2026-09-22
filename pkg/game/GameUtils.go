@@ -100,7 +100,7 @@ func (g *Game) refillUserCards(player *Player) {
 		addedCards = append(addedCards, *card)
 	}
 	if len(addedCards) > 0 {
-		g.Log.Add(NewRefillEvent(*player, addedCards))
+		g.Log.Add(NewRefillEvent(player.snapshot(), addedCards))
 	}
 }
 

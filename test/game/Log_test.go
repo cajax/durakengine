@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/cajax/durakengine/pkg/game"
@@ -69,5 +70,67 @@ func TestLogTransfer(t *testing.T) {
 	}
 	if transfer.GetPlayer().ID != p[1].ID || transfer.NextDefender.ID != p[2].ID || len(transfer.GetCards()) != 1 {
 		t.Error("Expected transfer event from defender to next defender with redirected card")
+	}
+}
+
+func TestLogSerializesPlayerState(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Seven, game.Clubs)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Eight, game.Clubs)))
+
+	data, err := json.Marshal(g.Log.GetEvents(1, 3))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var events []struct {
+		Type   string `json:"type"`
+		Player struct {
+			ID       string `json:"id"`
+			Attacker bool   `json:"attacker"`
+			Defender bool   `json:"defender"`
+			Cards    []game.Card
+		} `json:"player"`
+		Pair struct {
+			AttackerID string `json:"attacker_id"`
+			DefenderID string `json:"defender_id"`
+		} `json:"pair"`
+	}
+	if err := json.Unmarshal(data, &events); err != nil {
+		t.Fatal(err)
+	}
+
+	attack := events[0]
+	if !attack.Player.Attacker || len(attack.Player.Cards) != 1 || attack.Player.Cards[0] != *card(game.Seven, game.Clubs) {
+		t.Errorf("Expected attacker with remaining hand in attack event, got %+v", attack.Player)
+	}
+
+	defense := events[1]
+	if !defense.Player.Defender || len(defense.Player.Cards) != 1 {
+		t.Errorf("Expected defender with remaining hand in defense event, got %+v", defense.Player)
+	}
+	if defense.Pair.AttackerID != p[0].ID || defense.Pair.DefenderID != p[1].ID {
+		t.Errorf("Expected pair to reference players by ID, got %+v", defense.Pair)
+	}
+}
+
+func TestLogKeepsStateAtTimeOfEvent(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Six, game.Spades)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	attack := g.Log.GetEvents(1, 2)[0].(*game.AttackEvent)
+	before, _ := json.Marshal(attack)
+
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Spades)}))
+	mustSucceed(t, g.Pickup(p[1]))
+
+	after, _ := json.Marshal(attack)
+	if string(before) != string(after) {
+		t.Errorf("Expected logged event not to change, before %s, after %s", before, after)
 	}
 }

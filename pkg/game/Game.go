@@ -106,7 +106,7 @@ func (g *Game) checkGameOver() {
 	var activePlayers []Player
 	for _, player := range g.players {
 		if !player.quitGame {
-			activePlayers = append(activePlayers, *player)
+			activePlayers = append(activePlayers, player.snapshot())
 		}
 	}
 	if len(activePlayers) < 2 {
@@ -131,7 +131,7 @@ func (g *Game) endTurn(nextAttackerIndex int) {
 	_, nextDefender := g.getActivePlayerToTheLeft(index)
 	g.setAttacker(nextAttacker)
 	g.setDefender(nextDefender)
-	g.Log.Add(NewEndTurnEvent(*nextAttacker, *nextDefender))
+	g.Log.Add(NewEndTurnEvent(nextAttacker.snapshot(), nextDefender.snapshot()))
 }
 
 // GetOptions returns game options set during creation

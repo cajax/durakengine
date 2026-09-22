@@ -1,17 +1,58 @@
 package game
 
+import (
+	"encoding/json"
+	"slices"
+)
+
 // Player state and details
 type Player struct {
+	ID            string
+	skipTurn      bool
+	quitGame      bool
+	wonGame       bool
+	firstWinner   bool
+	abandonedGame bool
+	Name          string
+	cards         []*Card
+	defender      bool
+	attacker      bool
+}
+
+type playerJSON struct {
 	ID            string  `json:"id"`
-	skipTurn      bool    `json:"skip_turn"`
-	quitGame      bool    `json:"quit_game"`
-	wonGame       bool    `json:"won_game"`
-	firstWinner   bool    `json:"first_winner"`
-	abandonedGame bool    `json:"abandoned_game"`
 	Name          string  `json:"name"`
-	cards         []*Card `json:"Cards"`
-	defender      bool    `json:"defender"`
-	attacker      bool    `json:"attacker"`
+	Cards         []*Card `json:"cards"`
+	Attacker      bool    `json:"attacker"`
+	Defender      bool    `json:"defender"`
+	SkipTurn      bool    `json:"skip_turn"`
+	QuitGame      bool    `json:"quit_game"`
+	WonGame       bool    `json:"won_game"`
+	FirstWinner   bool    `json:"first_winner"`
+	AbandonedGame bool    `json:"abandoned_game"`
+}
+
+// MarshalJSON serializes player including hand and state
+func (p Player) MarshalJSON() ([]byte, error) {
+	return json.Marshal(playerJSON{
+		ID:            p.ID,
+		Name:          p.Name,
+		Cards:         p.cards,
+		Attacker:      p.attacker,
+		Defender:      p.defender,
+		SkipTurn:      p.skipTurn,
+		QuitGame:      p.quitGame,
+		WonGame:       p.wonGame,
+		FirstWinner:   p.firstWinner,
+		AbandonedGame: p.abandonedGame,
+	})
+}
+
+// snapshot returns copy of player that is not affected by further changes
+func (p *Player) snapshot() Player {
+	s := *p
+	s.cards = slices.Clone(p.cards)
+	return s
 }
 
 // NewPlayer Creates new instance of in-game player

@@ -6,7 +6,3 @@ linters:
       # Error messages are exported constants that callers compare against
       - linters: [staticcheck]
         text: "ST1005:"
-      # Unexported Player fields with JSON tags, see #15
-      - path: pkg/game/Player.go
-        linters: [govet, staticcheck]
-        text: "structtag:|SA5008:"
