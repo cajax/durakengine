@@ -61,15 +61,18 @@ func (b *Bot) defend(g *Game) bool {
 	}
 
 	if len(cardChoices) < cardsCount {
-		g.Pickup(b.Player)
-		return true
+		return g.Pickup(b.Player) == nil
 	}
 
+	acted := false
 	for _, choice := range cardChoices {
-		g.Defend(b.Player, choice.PairIndex, choice.Card)
+		if g.Defend(b.Player, choice.PairIndex, choice.Card) != nil {
+			break
+		}
+		acted = true
 	}
 
-	return true
+	return acted
 }
 
 func (b *Bot) attack(g *Game) bool {
@@ -77,15 +80,13 @@ func (b *Bot) attack(g *Game) bool {
 
 	if b.Player.attacker && !g.table.HasUnbeatenCards() && !g.table.IsEmpty() {
 		//Attacker has nothing to do
-		g.EndAttack(b.Player)
-
-		return true
+		return g.EndAttack(b.Player) == nil
 	}
 
 	if b.Player.attacker && g.table.IsEmpty() {
 		cards := b.getLeastValuedCardsForAttack(g)
 		if len(cards) == 0 {
-			panic("WTF")
+			return false
 		}
 		err := g.Attack(b.Player, cards)
 		return err == nil
@@ -99,8 +100,6 @@ func (b *Bot) attack(g *Game) bool {
 
 		return false
 	}
-
-	g.table.HasUnbeatenCards()
 
 	return false
 }

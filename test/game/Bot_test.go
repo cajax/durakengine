@@ -186,3 +186,15 @@ func TestBotDefendsWithTrumpAce(t *testing.T) {
 		t.Errorf("Expected trump ace to beat the card, got %v", c)
 	}
 }
+
+func TestBotAttackerWithoutCardsDoesNotAct(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{},
+		[]*game.Card{card(game.Eight, game.Clubs)},
+	)
+	b := game.Bot{Player: p[0]}
+
+	if b.Act(g) {
+		t.Error("Expected bot without cards not to act")
+	}
+}

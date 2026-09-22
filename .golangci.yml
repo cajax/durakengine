@@ -10,6 +10,3 @@ linters:
       - path: pkg/game/Player.go
         linters: [govet, staticcheck]
         text: "structtag:|SA5008:"
-      # Bot ignores action errors, see #16
-      - path: pkg/game/Bot.go
-        linters: [errcheck]
