@@ -139,3 +139,34 @@ func TestSelectFirstAttackerWithoutTrumps(t *testing.T) {
 		t.Errorf("Expected every player to be selected as first attacker at least once, got %v", selected)
 	}
 }
+
+func TestStartGameFailWithInvalidMinRank(t *testing.T) {
+	for _, value := range []string{"1", "Z", "invalid"} {
+		g := newUnstartedGame(2)
+		g.SetOption(game.OptionMinRank, game.Option{Value: value})
+		expectError(t, g.StartGame(), game.ErrorInvalidMinRank)
+	}
+}
+
+func TestStartGameFailWithDeckTooSmall(t *testing.T) {
+	// 20 cards for 4 players
+	g := newUnstartedGame(4)
+	g.SetOption(game.OptionMinRank, game.Option{Value: "10"})
+	expectError(t, g.StartGame(), game.ErrorDeckTooSmall)
+
+	// 24 cards for 4 players
+	g = newUnstartedGame(4)
+	g.SetOption(game.OptionMinRank, game.Option{Value: "9"})
+	mustSucceed(t, g.StartGame())
+}
+
+func TestStartGameUsesDefaultMinRank(t *testing.T) {
+	g := newUnstartedGame(2)
+	g.SetOption(game.OptionMinRank, game.Option{})
+	mustSucceed(t, g.StartGame())
+
+	deck := g.GetDeck()
+	if deck.GetCount() != 36-2*6 {
+		t.Errorf("Expected 36 cards deck by default, got %d cards left", deck.GetCount())
+	}
+}

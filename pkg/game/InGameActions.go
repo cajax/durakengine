@@ -9,6 +9,8 @@ import (
 const (
 	ErrorTooFewPlayers                   = "Too few players in game"
 	ErrorTooManyPlayers                  = "Too many players in game"
+	ErrorInvalidMinRank                  = "Invalid least card rank"
+	ErrorDeckTooSmall                    = "Deck is too small to deal cards to all players"
 	ErrorNotInPlayingState               = "Game is not in playing state"
 	ErrorFirstAttackWithDifferentRanks   = "First attack in turn with different ranks"
 	ErrorFirstAttackByNeighbor           = "First attack in turn can not be made by neighbor"
@@ -43,7 +45,19 @@ func (g *Game) StartGame() error {
 	if len(g.players) > 6 {
 		return errors.New(ErrorTooManyPlayers)
 	}
-	minRank := RankFromString(g.GetOption(OptionMinRank).Value)
+
+	minRank := Six
+	if value := g.GetOption(OptionMinRank).Value; value != "" {
+		minRank = RankFromString(value)
+		if minRank < Two || minRank > Ace {
+			return errors.New(ErrorInvalidMinRank)
+		}
+	}
+
+	if deckSize(minRank) < len(g.players)*handSize {
+		return errors.New(ErrorDeckTooSmall)
+	}
+
 	g.initTable(minRank)
 	return nil
 }

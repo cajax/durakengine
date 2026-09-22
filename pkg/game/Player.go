@@ -5,6 +5,9 @@ import (
 	"slices"
 )
 
+// handSize is number of cards players get on refill
+const handSize = 6
+
 // Player state and details
 type Player struct {
 	ID            string
