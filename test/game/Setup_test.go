@@ -113,3 +113,29 @@ func TestSeededGamesAreReproducible(t *testing.T) {
 	mustSucceed(t, g.StartGame())
 	expectError(t, g.SetRandom(nil), game.ErrorGameAlreadyStarted)
 }
+
+func TestSelectFirstAttackerWithoutTrumps(t *testing.T) {
+	selected := map[int]bool{}
+	for seed := uint64(0); seed < 100; seed++ {
+		players := []*game.Player{
+			game.NewPlayer("1", false, false, false, "Player", []*game.Card{card(game.Six, game.Clubs)}, false, false),
+			game.NewPlayer("2", false, false, false, "Player", []*game.Card{card(game.Seven, game.Clubs)}, false, false),
+			game.NewPlayer("3", false, false, false, "Player", []*game.Card{card(game.Eight, game.Clubs)}, false, false),
+		}
+		deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
+		g := game.NewGame(deck, players, map[string]game.Option{}, false, false, game.Table{}, nil)
+		mustSucceed(t, g.SetRandom(rand.New(rand.NewPCG(seed, 0))))
+
+		g.SelectFirstAttacker()
+
+		for i, p := range players {
+			if p.IsAttacker() {
+				selected[i] = true
+			}
+		}
+	}
+
+	if len(selected) != 3 {
+		t.Errorf("Expected every player to be selected as first attacker at least once, got %v", selected)
+	}
+}

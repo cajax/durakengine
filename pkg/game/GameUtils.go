@@ -1,7 +1,6 @@
 package game
 
 import (
-	"math/rand"
 	"strconv"
 )
 
@@ -150,7 +149,7 @@ func (g *Game) attackCapacity() int {
 	return max(capacity, 0)
 }
 
-// SelectFirstAttacker find Player with the least trump, or random if none
+// SelectFirstAttacker find Player with the least trump, or random Player if none has trumps
 func (g *Game) SelectFirstAttacker() {
 	leastRank := Ace + 1
 	var candidate *Player = nil
@@ -164,8 +163,7 @@ func (g *Game) SelectFirstAttacker() {
 	}
 
 	if candidate == nil {
-		idx := rand.Intn(len(g.players) - 1)
-		candidate = g.players[idx]
+		candidate = g.players[intN(g.rng, len(g.players))]
 	}
 
 	g.setAttacker(candidate)
