@@ -12,6 +12,7 @@ type Player struct {
 	quitGame      bool
 	wonGame       bool
 	firstWinner   bool
+	lostGame      bool
 	abandonedGame bool
 	Name          string
 	cards         []*Card
@@ -29,6 +30,7 @@ type playerJSON struct {
 	QuitGame      bool    `json:"quit_game"`
 	WonGame       bool    `json:"won_game"`
 	FirstWinner   bool    `json:"first_winner"`
+	LostGame      bool    `json:"lost_game"`
 	AbandonedGame bool    `json:"abandoned_game"`
 }
 
@@ -44,6 +46,7 @@ func (p Player) MarshalJSON() ([]byte, error) {
 		QuitGame:      p.quitGame,
 		WonGame:       p.wonGame,
 		FirstWinner:   p.firstWinner,
+		LostGame:      p.lostGame,
 		AbandonedGame: p.abandonedGame,
 	})
 }
@@ -114,6 +117,21 @@ func (p *Player) IsDefender() bool {
 // IsAttacker returns true when player is main attacker (initiator of turn of last redirector)
 func (p *Player) IsAttacker() bool {
 	return p.attacker
+}
+
+// HasWon is true when player got rid of all cards
+func (p *Player) HasWon() bool {
+	return p.wonGame
+}
+
+// IsFirstWinner is true when player was the first to get rid of all cards
+func (p *Player) IsFirstWinner() bool {
+	return p.firstWinner
+}
+
+// IsLoser is true when player was the last one left in game
+func (p *Player) IsLoser() bool {
+	return p.lostGame
 }
 
 // HasAbandoned is true when user quit game before game over

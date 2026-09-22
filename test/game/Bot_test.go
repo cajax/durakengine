@@ -137,8 +137,8 @@ func TestBotsPlayFullGames(t *testing.T) {
 			for _, throwIn := range []string{"0", "1"} {
 				for _, limit := range []string{"0", "6"} {
 					testBotGames(t, n, map[string]game.Option{
-						"min_rank":                {Value: "6"},
-						"with_redirect":           {Value: redirect},
+						game.OptionMinRank:        {Value: "6"},
+						game.OptionRedirect:       {Value: redirect},
 						game.OptionThrowIn:        {Value: throwIn},
 						game.OptionMaxAttackCards: {Value: limit},
 					})

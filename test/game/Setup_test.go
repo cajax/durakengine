@@ -13,7 +13,7 @@ func newUnstartedGame(n int) *game.Game {
 	for i := 0; i < n; i++ {
 		players = append(players, &game.Player{Name: "Player"})
 	}
-	options := map[string]game.Option{"min_rank": {Value: "6"}}
+	options := map[string]game.Option{game.OptionMinRank: {Value: "6"}}
 	return game.NewGame(&game.Deck{}, players, options, false, false, game.Table{}, nil)
 }
 

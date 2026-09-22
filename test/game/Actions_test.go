@@ -6,7 +6,7 @@ import (
 	"github.com/cajax/durakengine/pkg/game"
 )
 
-var withRedirect = map[string]game.Option{"with_redirect": {Value: "1"}}
+var withRedirect = map[string]game.Option{game.OptionRedirect: {Value: "1"}}
 
 func TestActionsFailWhenGameNotInProgress(t *testing.T) {
 	for _, state := range []struct{ started, over bool }{{false, false}, {true, true}} {
@@ -211,7 +211,7 @@ func TestRedirectFails(t *testing.T) {
 
 func TestRedirectFailWhenDisabled(t *testing.T) {
 	g, p := newRedirectGame()
-	g.SetOption("with_redirect", game.Option{Value: "0"})
+	g.SetOption(game.OptionRedirect, game.Option{Value: "0"})
 	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
 
 	expectError(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Hearts)}), game.ErrorNoRedirectsAllowed)
@@ -266,6 +266,12 @@ func TestGameOver(t *testing.T) {
 	if !players[0].HasQuit() || players[1].HasQuit() {
 		t.Error("Expected only player with empty hand to quit")
 	}
+	if !players[0].HasWon() || !players[0].IsFirstWinner() || players[0].IsLoser() {
+		t.Error("Expected player with empty hand to be the first winner")
+	}
+	if !players[1].IsLoser() || players[1].HasWon() {
+		t.Error("Expected last player in game to lose")
+	}
 	if lastEventType(g) != game.GameOverEventType {
 		t.Error("Expected game over event to be logged")
 	}
@@ -300,7 +306,7 @@ func TestAttackLimitUnlimited(t *testing.T) {
 }
 
 func TestRedirectRespectsAttackLimit(t *testing.T) {
-	options := map[string]game.Option{"with_redirect": {Value: "1"}, game.OptionMaxAttackCards: {Value: "1"}}
+	options := map[string]game.Option{game.OptionRedirect: {Value: "1"}, game.OptionMaxAttackCards: {Value: "1"}}
 	g, p := newTestGame(options,
 		[]*game.Card{card(game.Six, game.Clubs)},
 		[]*game.Card{card(game.Six, game.Spades), card(game.Ace, game.Clubs)},
@@ -311,7 +317,7 @@ func TestRedirectRespectsAttackLimit(t *testing.T) {
 	expectError(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Spades)}), game.ErrorAttackLimitReached)
 }
 
-var withRedirectKeepCard = map[string]game.Option{"with_redirect": {Value: "1"}, game.OptionRedirectKeepCard: {Value: "1"}}
+var withRedirectKeepCard = map[string]game.Option{game.OptionRedirect: {Value: "1"}, game.OptionRedirectKeepCard: {Value: "1"}}
 
 func TestRedirectKeepCard(t *testing.T) {
 	g, p := newTestGame(withRedirectKeepCard,
@@ -356,5 +362,45 @@ func TestRedirectKeepCardShowsEachCardOncePerTurn(t *testing.T) {
 	mustSucceed(t, g.Pickup(p[1]))
 	if len(p[1].GetCards()) != 3 || !hasCard(p[1].GetCards(), card(game.Six, game.Clubs)) {
 		t.Error("Expected defender to pick up only the attack card")
+	}
+}
+
+func TestGameOverWhenDefenderBeatsLastCard(t *testing.T) {
+	players := []*game.Player{
+		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{card(game.Six, game.Clubs), card(game.Ten, game.Spades)}, false, true),
+		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{card(game.Seven, game.Clubs)}, true, false),
+	}
+	deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
+	deck.GetCard()
+	g := game.NewGame(deck, players, map[string]game.Option{}, true, false, game.Table{}, nil)
+
+	mustSucceed(t, g.Attack(players[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Defend(players[1], 0, card(game.Seven, game.Clubs)))
+	mustSucceed(t, g.EndAttack(players[0]))
+
+	if !g.IsOver() || !players[1].HasWon() || !players[0].IsLoser() {
+		t.Error("Expected defender to win and attacker with cards left to lose")
+	}
+}
+
+func TestPickupSkipsTurn(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Seven, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Spades), card(game.Ace, game.Spades)},
+		[]*game.Card{card(game.Six, game.Diamonds), card(game.Eight, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Pickup(p[1]))
+
+	if !p[1].IsSkipTurn() || p[0].IsSkipTurn() || p[2].IsSkipTurn() {
+		t.Error("Expected only player who picked up to skip turn")
+	}
+
+	// player 3 attacks player 1
+	mustSucceed(t, g.Attack(p[2], []*game.Card{card(game.Six, game.Diamonds)}))
+	mustSucceed(t, g.Pickup(p[0]))
+
+	if p[1].IsSkipTurn() || !p[0].IsSkipTurn() {
+		t.Error("Expected skip turn to move to the player who picked up last")
 	}
 }

@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"maps"
 	"math/rand/v2"
 )
 
@@ -33,8 +34,6 @@ func NewGame(deck *Deck, players []*Player, options map[string]Option, started b
 		Log:        NewLog(),
 	}
 }
-
-//todo test win-lose case when attacker has some cards, but defender nothing more
 
 // advanceSequence increment internal action counter
 func (g *Game) advanceSequence() {
@@ -68,9 +67,12 @@ func (g *Game) SetPlayers(players []*Player) error {
 	return nil
 }
 
-// TODO do rest of flag updates
-func (g *Game) endGame() {
+// endGame marks game as over and the last player in game, if any, as loser
+func (g *Game) endGame(loser *Player) {
 	g.over = true
+	if loser != nil {
+		loser.lostGame = true
+	}
 }
 
 func (g *Game) IsOver() bool {
@@ -87,8 +89,6 @@ func (g *Game) inProgress() bool {
 // also marks player as first to win if applicable
 func (g *Game) winPlayer(p *Player) {
 	p.quitGame = true
-	// TODO refactor (first) winner detector. Instead of checking in the end of whole turn do a check after every valid action and count number of Cards in hand
-	// Simulate refill to see if Player with empty hand now would have or not Cards from deck on refill. If no new Cards then user won.
 	firstToWin := true
 	for _, p := range g.players {
 		if p.wonGame {
@@ -103,22 +103,37 @@ func (g *Game) winPlayer(p *Player) {
 // checkGameOver checks if only one active player left
 func (g *Game) checkGameOver() {
 	// count number of active players. if <2 game is over
-	var activePlayers []Player
+	var activePlayers []*Player
 	for _, player := range g.players {
 		if !player.quitGame {
-			activePlayers = append(activePlayers, player.snapshot())
+			activePlayers = append(activePlayers, player)
 		}
 	}
-	if len(activePlayers) < 2 {
-		g.endGame()
-		g.Log.Add(NewGameOverEvent(activePlayers))
+	if len(activePlayers) >= 2 {
+		return
 	}
+
+	var loser *Player
+	if len(activePlayers) == 1 {
+		loser = activePlayers[0]
+	}
+	g.endGame(loser)
+
+	lastPlayers := make([]Player, 0, len(activePlayers))
+	for _, player := range activePlayers {
+		lastPlayers = append(lastPlayers, player.snapshot())
+	}
+	g.Log.Add(NewGameOverEvent(lastPlayers))
 }
 
 // endTurn refills hands, detects winners and prepares next turn
 //
-// Next attacker is the first active player starting from the given seat index
-func (g *Game) endTurn(nextAttackerIndex int) {
+// Next attacker is the first active player starting from the given seat index.
+// Skipping player, if any, is marked as missing the next turn
+func (g *Game) endTurn(nextAttackerIndex int, skipping *Player) {
+	for _, player := range g.players {
+		player.skipTurn = player == skipping
+	}
 	g.RefillUsers()
 	g.detectWinners()
 	g.checkGameOver()
@@ -134,9 +149,9 @@ func (g *Game) endTurn(nextAttackerIndex int) {
 	g.Log.Add(NewEndTurnEvent(nextAttacker.snapshot(), nextDefender.snapshot()))
 }
 
-// GetOptions returns game options set during creation
-func (g *Game) GetOptions() {
-	//todo
+// GetOptions returns copy of game options
+func (g *Game) GetOptions() map[string]Option {
+	return maps.Clone(g.options)
 }
 
 // GetTable returns pointer to game table
