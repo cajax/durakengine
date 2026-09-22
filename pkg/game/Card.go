@@ -1,9 +1,11 @@
 package game
 
 import "fmt"
+
 // Suit family
 type Suit int
-//Rank level
+
+// Rank level
 type Rank int8
 
 // Card suits
@@ -31,7 +33,7 @@ const (
 	Ace
 )
 
-//Card representation
+// Card representation
 type Card struct {
 	Suit Suit `json:"suit"`
 	Rank Rank `json:"rank"`

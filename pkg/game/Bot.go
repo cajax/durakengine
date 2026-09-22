@@ -3,6 +3,7 @@ package game
 import (
 	"sort"
 )
+
 // Simple bot
 type Bot struct {
 	Player           *Player
@@ -11,7 +12,7 @@ type Bot struct {
 
 type CardChoice struct {
 	PairIndex int
-	Card *Card
+	Card      *Card
 }
 
 func (b *Bot) newCardChoice(card *Card, i int) *CardChoice {

@@ -1,6 +1,6 @@
 package game
 
-//Player state and details
+// Player state and details
 type Player struct {
 	ID            string  `json:"id"`
 	skipTurn      bool    `json:"skip_turn"`
