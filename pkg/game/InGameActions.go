@@ -194,6 +194,7 @@ func (g *Game) EndAttack(p *Player) error {
 
 	// From here on we no longer expect errors
 	g.advanceSequence()
+	g.Log.Add(NewDiscardEvent(*p, g.table.GetCardsOnTable()))
 
 	g.table.clear()
 
@@ -251,6 +252,7 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 
 	//From here on we no longer expect errors
 	g.advanceSequence()
+	g.Log.Add(NewTransferEvent(*defender, cards, *nextDefender))
 
 	for _, card := range cards {
 		g.table.attack(defender, card)

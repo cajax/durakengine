@@ -132,3 +132,40 @@ func (e *AbandonEvent) GetCards() []*Card {
 func (e *AbandonEvent) GetPlayer() Player {
 	return e.Player
 }
+
+type TransferEvent struct {
+	*Event
+	Player       Player  `json:"player"`
+	Cards        []*Card `json:"cards"`
+	NextDefender Player  `json:"next_defender"`
+}
+
+func NewTransferEvent(player Player, cards []*Card, nextDefender Player) *TransferEvent {
+	return &TransferEvent{Player: player, Cards: cards, NextDefender: nextDefender, Event: &Event{Type: TransferEventType}}
+}
+
+func (e *TransferEvent) GetCards() []*Card {
+	return e.Cards
+}
+
+func (e *TransferEvent) GetPlayer() Player {
+	return e.Player
+}
+
+type DiscardEvent struct {
+	*Event
+	Player Player  `json:"player"`
+	Cards  []*Card `json:"cards"`
+}
+
+func NewDiscardEvent(player Player, cards []*Card) *DiscardEvent {
+	return &DiscardEvent{Player: player, Cards: cards, Event: &Event{Type: DiscardEventType}}
+}
+
+func (e *DiscardEvent) GetCards() []*Card {
+	return e.Cards
+}
+
+func (e *DiscardEvent) GetPlayer() Player {
+	return e.Player
+}
