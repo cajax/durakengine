@@ -1,6 +1,8 @@
 package game
 
 import (
+	"math/rand/v2"
+	"slices"
 	"testing"
 
 	"github.com/cajax/durakengine/pkg/game"
@@ -81,5 +83,59 @@ func TestStartGameSelectsAttackerWithLeastTrump(t *testing.T) {
 		if expected != nil && !expected.IsAttacker() {
 			t.Fatal("Expected player with the least trump to attack first")
 		}
+	}
+}
+
+func TestSeededGamesAreReproducible(t *testing.T) {
+	hands := func(seed uint64) [][]game.Card {
+		g := newUnstartedGame(3)
+		mustSucceed(t, g.SetRandom(rand.New(rand.NewPCG(seed, 0))))
+		mustSucceed(t, g.StartGame())
+		var hands [][]game.Card
+		for _, p := range g.GetPlayers() {
+			var hand []game.Card
+			for _, c := range p.GetCards() {
+				hand = append(hand, *c)
+			}
+			hands = append(hands, hand)
+		}
+		return hands
+	}
+
+	a, b := hands(42), hands(42)
+	for i := range a {
+		if !slices.Equal(a[i], b[i]) {
+			t.Fatal("Expected same deal with same seed")
+		}
+	}
+
+	g := newUnstartedGame(2)
+	mustSucceed(t, g.StartGame())
+	expectError(t, g.SetRandom(nil), game.ErrorGameAlreadyStarted)
+}
+
+func TestSelectFirstAttackerWithoutTrumps(t *testing.T) {
+	selected := map[int]bool{}
+	for seed := uint64(0); seed < 100; seed++ {
+		players := []*game.Player{
+			game.NewPlayer("1", false, false, false, "Player", []*game.Card{card(game.Six, game.Clubs)}, false, false),
+			game.NewPlayer("2", false, false, false, "Player", []*game.Card{card(game.Seven, game.Clubs)}, false, false),
+			game.NewPlayer("3", false, false, false, "Player", []*game.Card{card(game.Eight, game.Clubs)}, false, false),
+		}
+		deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
+		g := game.NewGame(deck, players, map[string]game.Option{}, false, false, game.Table{}, nil)
+		mustSucceed(t, g.SetRandom(rand.New(rand.NewPCG(seed, 0))))
+
+		g.SelectFirstAttacker()
+
+		for i, p := range players {
+			if p.IsAttacker() {
+				selected[i] = true
+			}
+		}
+	}
+
+	if len(selected) != 3 {
+		t.Errorf("Expected every player to be selected as first attacker at least once, got %v", selected)
 	}
 }

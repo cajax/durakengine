@@ -22,9 +22,10 @@ func main() {
 		bots = append(bots, &game.Bot{Player: p})
 	}
 
-	// allow redirects
+	// allow redirects and throw-ins by neighbors
 	options := map[string]game.Option{}
 	options["with_redirect"] = game.Option{Value: "1", Exposed: true}
+	options[game.OptionThrowIn] = game.Option{Value: "1", Exposed: true}
 
 	// 36 cards, least rank is 6
 	r := game.Six

@@ -30,6 +30,7 @@ const (
 	ErrorPlayerAlreadyQuit               = "Player already quit"
 	ErrorNoPlayerToRedirect              = "No player to redirect to"
 	ErrorAttackLimitReached              = "Attacking with more cards than allowed per turn"
+	ErrorRedirectCardAlreadyShown        = "Card was already shown to redirect in this turn"
 )
 
 func (g *Game) StartGame() error {
@@ -51,7 +52,7 @@ func (g *Game) initTable(minRank Rank) {
 
 	g.table = Table{}
 	g.table.clear()
-	g.deck = Deck{}
+	g.deck = Deck{rng: g.rng}
 
 	g.deck.ResetDeck(minRank)
 	g.SpreadCards()
@@ -76,7 +77,7 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 		if g.table.IsEmpty() && !g.CardsOfSameRank(cards) {
 			return errors.New(ErrorFirstAttackWithDifferentRanks)
 		}
-	} else if isNeighbor { // TODO check if podkindnoy
+	} else if isNeighbor {
 		if g.table.IsEmpty() {
 			return errors.New(ErrorFirstAttackByNeighbor)
 		}
@@ -194,6 +195,7 @@ func (g *Game) EndAttack(p *Player) error {
 
 	// From here on we no longer expect errors
 	g.advanceSequence()
+	g.Log.Add(NewDiscardEvent(*p, g.table.GetCardsOnTable()))
 
 	g.table.clear()
 
@@ -241,18 +243,35 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 		return errors.New(ErrorNoPlayerToRedirect)
 	}
 
-	if len(nextDefender.cards) < len(g.table.GetCardsOnTable())+len(cards) {
+	// shown cards stay in defender's hand
+	keepCards := g.GetOption(OptionRedirectKeepCard).Value == "1"
+	addedCards := len(cards)
+	if keepCards {
+		addedCards = 0
+		for _, card := range cards {
+			if g.table.wasShown(card) {
+				return errors.New(ErrorRedirectCardAlreadyShown)
+			}
+		}
+	}
+
+	if len(nextDefender.cards) < len(g.table.GetCardsOnTable())+addedCards {
 		return errors.New(ErrorAttackIsTooBig)
 	}
 
-	if !g.withinAttackLimit(len(cards)) {
+	if !g.withinAttackLimit(addedCards) {
 		return errors.New(ErrorAttackLimitReached)
 	}
 
 	//From here on we no longer expect errors
 	g.advanceSequence()
+	g.Log.Add(NewTransferEvent(*defender, cards, *nextDefender, keepCards))
 
 	for _, card := range cards {
+		if keepCards {
+			g.table.shown = append(g.table.shown, *card)
+			continue
+		}
 		g.table.attack(defender, card)
 		defender.removeCard(card)
 	}

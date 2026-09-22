@@ -5,6 +5,7 @@ const (
 	AttackEventType   = "attack"
 	DefenseEventType  = "defense"
 	TransferEventType = "transfer"
+	DiscardEventType  = "discard"
 	PickupEventType   = "pickup"
 	RefillEventType   = "refill"
 	EndTurnEventType  = "end_turn"

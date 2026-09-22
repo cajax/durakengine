@@ -1,8 +1,11 @@
 package game
 
 import (
-	"github.com/cajax/durakengine/pkg/game"
+	"math/rand/v2"
+	"slices"
 	"testing"
+
+	"github.com/cajax/durakengine/pkg/game"
 )
 
 func TestGetCard(t *testing.T) {
@@ -72,5 +75,52 @@ func TestDeckDealsEveryCardOnceWithTrumpLast(t *testing.T) {
 	}
 	if _, err := deck.GetTrump(); err == nil || err.Error() != game.ErrorDeckNoTrump {
 		t.Error("Expected no trump after it was dealt")
+	}
+}
+
+func TestDeckDrawsInGivenOrder(t *testing.T) {
+	cards := []*game.Card{{Suit: game.Clubs, Rank: game.Six}, {Suit: game.Spades, Rank: game.Ten}}
+	trump := &game.Card{Suit: game.Hearts, Rank: game.Ace}
+	deck := game.NewDeck(cards, trump)
+
+	for _, expected := range []*game.Card{cards[0], cards[1], trump} {
+		if c := deck.GetCard(); c != expected {
+			t.Errorf("Expected %s, got %v", expected.ToString(), c)
+		}
+	}
+	if deck.GetCard() != nil {
+		t.Error("Expected empty deck")
+	}
+}
+
+func TestDeckShuffleIsReproducibleWithSeed(t *testing.T) {
+	deal := func(seed uint64) []game.Card {
+		deck := game.NewDeck([]*game.Card{}, &game.Card{Suit: game.Spades, Rank: game.Seven})
+		deck.SetRandom(rand.New(rand.NewPCG(seed, 0)))
+		deck.ResetDeck(game.Six)
+		var cards []game.Card
+		for c := deck.GetCard(); c != nil; c = deck.GetCard() {
+			cards = append(cards, *c)
+		}
+		return cards
+	}
+
+	if !slices.Equal(deal(1), deal(1)) {
+		t.Error("Expected same order with same seed")
+	}
+	if slices.Equal(deal(1), deal(2)) {
+		t.Error("Expected different order with different seed")
+	}
+}
+
+func TestAddCard(t *testing.T) {
+	deck := game.NewDeck([]*game.Card{{Suit: game.Clubs, Rank: game.Six}}, &game.Card{Suit: game.Spades, Rank: game.Seven})
+	deck.AddCard(&game.Card{Suit: game.Clubs, Rank: game.Ten})
+
+	if deck.GetCount() != 3 {
+		t.Errorf("Expected 3 cards, got %d", deck.GetCount())
+	}
+	if c := deck.GetCard(); c.Suit != game.Clubs {
+		t.Error("Expected trump card to stay at the bottom")
 	}
 }

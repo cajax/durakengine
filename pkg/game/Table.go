@@ -3,6 +3,8 @@ package game
 // Table represent the list of card pairs on table
 type Table struct {
 	pairs []*TablePair
+	// cards shown to redirect in current turn
+	shown []Card
 }
 
 // TablePair contains details of pair of attack card with its owner and optionally defense card with defender
@@ -30,6 +32,17 @@ func (t *Table) GetCardsOnTable() []*Card {
 
 func (t *Table) clear() {
 	t.pairs = []*TablePair{}
+	t.shown = nil
+}
+
+// wasShown checks if card was already shown to redirect in current turn
+func (t *Table) wasShown(c *Card) bool {
+	for _, shown := range t.shown {
+		if shown == *c {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *Table) IsEmpty() bool {
