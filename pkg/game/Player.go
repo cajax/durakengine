@@ -47,6 +47,21 @@ func (p *Player) hasCard(c *Card) bool {
 	return false
 }
 
+// hasCards checks if all cards are in players hand, each listed only once
+func (p *Player) hasCards(cards []*Card) bool {
+	for i, c := range cards {
+		if !p.hasCard(c) {
+			return false
+		}
+		for _, other := range cards[:i] {
+			if other.Rank == c.Rank && other.Suit == c.Suit {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // GetCards returns pointer to player's cards
 func (p *Player) GetCards() []*Card {
 	return p.cards

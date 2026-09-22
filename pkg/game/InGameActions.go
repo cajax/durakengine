@@ -96,10 +96,8 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 		return errors.New(ErrorAttackIsTooBig)
 	}
 
-	for _, c := range cards {
-		if !p.hasCard(c) {
-			return errors.New(ErrorAttackerHasNoCard)
-		}
+	if !p.hasCards(cards) {
+		return errors.New(ErrorAttackerHasNoCard)
 	}
 
 	// From here on we no longer expect errors
@@ -126,7 +124,7 @@ func (g *Game) Defend(p *Player, i int, c *Card) error {
 	}
 
 	if !g.table.HasPair(i) {
-		errors.New(ErrorPairIndexOutOfRange)
+		return errors.New(ErrorPairIndexOutOfRange)
 	}
 	tp := g.table.GetPair(i)
 
@@ -204,6 +202,10 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 		return errors.New(ErrorRedirectWithNoOrMixedCards)
 	}
 
+	if !defender.hasCards(cards) {
+		return errors.New(ErrorDefenderHasNoCard)
+	}
+
 	if g.table.defenseStarted() {
 		return errors.New(ErrorAlreadyDefending)
 	}
@@ -224,6 +226,7 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 
 	for _, card := range cards {
 		g.table.attack(defender, card)
+		defender.removeCard(card)
 	}
 
 	g.setAttacker(defender)
@@ -247,8 +250,10 @@ func (g *Game) Abandon(player *Player) error {
 		for _, card := range player.cards {
 			g.deck.AddCard(card)
 		}
+		player.cards = nil
 	}
 	if player.IsAttacker() || player.IsDefender() {
+		g.cancelTurn()
 		i := g.GetPlayerIndex(player)
 		_, attacker := g.getActivePlayerToTheLeft(i)
 		g.endTurn(attacker)
