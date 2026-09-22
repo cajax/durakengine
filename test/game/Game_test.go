@@ -28,7 +28,7 @@ func TestAttackFailWithTooManyCards(t *testing.T) {
 	}
 	err := g.Attack(players[0], c)
 
-	if err.Error() != game.ErrorAttackIsTooBig {
+	if err == nil || err.Error() != game.ErrorAttackIsTooBig {
 		t.Error("Attack should fail with too many cards")
 	}
 }
@@ -75,7 +75,7 @@ func TestAttackFailWithTooManyAddedCards(t *testing.T) {
 	err = g.Attack(players[2], []*game.Card{
 		players[2].GetCards()[0],
 	})
-	if err.Error() != game.ErrorAttackIsTooBig {
+	if err == nil || err.Error() != game.ErrorAttackIsTooBig {
 		t.Error("Adding should fail with too many cards")
 	}
 }
