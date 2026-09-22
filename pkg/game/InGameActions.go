@@ -65,7 +65,7 @@ func (g *Game) initTable(minRank Rank) {
 
 // Attack player if is one of attacker
 func (g *Game) Attack(p *Player, cards []*Card) error {
-	if !g.IsStarted() || g.over {
+	if !g.inProgress() {
 		return errors.New(ErrorNotInPlayingState)
 	}
 	isNeighbor := g.IsOneOfAttackers(p)
@@ -115,6 +115,10 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 // Defend against cards on table if defender
 // todo replace tp by index of tp
 func (g *Game) Defend(p *Player, i int, c *Card) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
+
 	if !p.IsDefender() {
 		return errors.New(ErrorNotDefender)
 	}
@@ -146,6 +150,10 @@ func (g *Game) Defend(p *Player, i int, c *Card) error {
 
 // Pickup collects all cards from table if defender
 func (g *Game) Pickup(p *Player) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
+
 	if !p.IsDefender() {
 		return errors.New(ErrorDefenseByNotDefender)
 	}
@@ -164,6 +172,9 @@ func (g *Game) Pickup(p *Player) error {
 
 // EndAttack ends turn by attacker
 func (g *Game) EndAttack(p *Player) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
 
 	if !p.IsAttacker() {
 		return errors.New(ErrorGameEndTurnByNotAttacker)
@@ -189,6 +200,10 @@ func (g *Game) EndAttack(p *Player) error {
 
 // Redirect to the left with laying on table card(s) of the same rank
 func (g *Game) Redirect(defender *Player, cards []*Card) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
+
 	// todo option name to constant
 	if g.GetOption("with_redirect").Value != "1" {
 		return errors.New(ErrorNoRedirectsAllowed)
@@ -237,6 +252,10 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 
 // Abandon the game and put crds from hand into deck
 func (g *Game) Abandon(player *Player) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
+
 	if player.quitGame {
 		return errors.New(ErrorPlayerAlreadyQuit)
 	}

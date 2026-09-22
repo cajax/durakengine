@@ -8,16 +8,21 @@ import (
 
 var withRedirect = map[string]game.Option{"with_redirect": {Value: "1"}}
 
-func TestAttackFailWhenGameNotInProgress(t *testing.T) {
-	players := []*game.Player{
-		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{card(game.Six, game.Clubs)}, false, true),
-		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{card(game.Seven, game.Clubs)}, true, false),
-	}
-	deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
-
+func TestActionsFailWhenGameNotInProgress(t *testing.T) {
 	for _, state := range []struct{ started, over bool }{{false, false}, {true, true}} {
-		g := game.NewGame(deck, players, map[string]game.Option{}, state.started, state.over, game.Table{}, nil)
+		players := []*game.Player{
+			game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{card(game.Six, game.Clubs)}, false, true),
+			game.NewPlayer("2", false, false, false, "Defender", []*game.Card{card(game.Seven, game.Clubs)}, true, false),
+		}
+		deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
+		g := game.NewGame(deck, players, withRedirect, state.started, state.over, game.Table{}, nil)
+
 		expectError(t, g.Attack(players[0], players[0].GetCards()), game.ErrorNotInPlayingState)
+		expectError(t, g.Defend(players[1], 0, players[1].GetCards()[0]), game.ErrorNotInPlayingState)
+		expectError(t, g.Pickup(players[1]), game.ErrorNotInPlayingState)
+		expectError(t, g.EndAttack(players[0]), game.ErrorNotInPlayingState)
+		expectError(t, g.Redirect(players[1], players[1].GetCards()), game.ErrorNotInPlayingState)
+		expectError(t, g.Abandon(players[0]), game.ErrorNotInPlayingState)
 	}
 }
 

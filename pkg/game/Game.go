@@ -65,6 +65,11 @@ func (g *Game) IsOver() bool {
 	return g.over
 }
 
+// inProgress is true when game is started and not over yet
+func (g *Game) inProgress() bool {
+	return g.started && !g.over
+}
+
 // winPlayer marks player as winner
 //
 // also marks player as first to win if applicable
