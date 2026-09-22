@@ -81,7 +81,7 @@ func TestAttackFailByWrongPlayer(t *testing.T) {
 }
 
 func TestAttackByNeighbor(t *testing.T) {
-	g, p := newTestGame(withRedirect,
+	g, p := newTestGame(map[string]game.Option{game.OptionThrowIn: {Value: "1"}},
 		[]*game.Card{card(game.Six, game.Clubs)},
 		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs)},
 		[]*game.Card{card(game.Six, game.Spades)},
@@ -96,6 +96,18 @@ func TestAttackByNeighbor(t *testing.T) {
 	if len(g.GetTable().GetCardsToBeat()) != 2 {
 		t.Error("Expected neighbor to add card to table")
 	}
+}
+
+func TestAttackByNeighborFailWithoutThrowIn(t *testing.T) {
+	g, p := newTestGame(withRedirect,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Spades)},
+		[]*game.Card{card(game.Six, game.Diamonds)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+
+	expectError(t, g.Attack(p[2], p[2].GetCards()), game.ErrorAttackByWrongPlayer)
 }
 
 func TestDefend(t *testing.T) {

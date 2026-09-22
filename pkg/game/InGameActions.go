@@ -76,7 +76,7 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 		if g.table.IsEmpty() && !g.CardsOfSameRank(cards) {
 			return errors.New(ErrorFirstAttackWithDifferentRanks)
 		}
-	} else if isNeighbor { // TODO check if podkindnoy
+	} else if isNeighbor {
 		if g.table.IsEmpty() {
 			return errors.New(ErrorFirstAttackByNeighbor)
 		}

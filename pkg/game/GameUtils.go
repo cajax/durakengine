@@ -33,9 +33,11 @@ func (g *Game) getAttacker() (int, *Player) {
 }
 
 // GetNeighborAttackers returns up to 2 neighbors of defender. One each side
+//
+// Empty unless throw-ins are allowed by OptionThrowIn
 func (g *Game) GetNeighborAttackers() []*Player {
 	var neighbors []*Player
-	if g.GetOption("with_redirect").Value != "1" {
+	if g.GetOption(OptionThrowIn).Value != "1" {
 		return neighbors
 	}
 

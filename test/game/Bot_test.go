@@ -134,14 +134,21 @@ func TestBotEndsAttackWhenAllCardsBeaten(t *testing.T) {
 func TestBotsPlayFullGames(t *testing.T) {
 	for n := 2; n <= 6; n++ {
 		for _, redirect := range []string{"0", "1"} {
-			for _, limit := range []string{"0", "6"} {
-				testBotGames(t, n, redirect, limit)
+			for _, throwIn := range []string{"0", "1"} {
+				for _, limit := range []string{"0", "6"} {
+					testBotGames(t, n, map[string]game.Option{
+						"min_rank":                {Value: "6"},
+						"with_redirect":           {Value: redirect},
+						game.OptionThrowIn:        {Value: throwIn},
+						game.OptionMaxAttackCards: {Value: limit},
+					})
+				}
 			}
 		}
 	}
 }
 
-func testBotGames(t *testing.T, n int, redirect string, limit string) {
+func testBotGames(t *testing.T, n int, options map[string]game.Option) {
 	t.Helper()
 	finished := 0
 	games := 100
@@ -153,7 +160,6 @@ func testBotGames(t *testing.T, n int, redirect string, limit string) {
 			players = append(players, p)
 			bots = append(bots, &game.Bot{Player: p})
 		}
-		options := map[string]game.Option{"min_rank": {Value: "6"}, "with_redirect": {Value: redirect}, game.OptionMaxAttackCards: {Value: limit}}
 		g := game.NewGame(&game.Deck{}, players, options, false, false, game.Table{}, game.NewBotManager(bots))
 		mustSucceed(t, g.StartGame())
 
@@ -165,7 +171,7 @@ func testBotGames(t *testing.T, n int, redirect string, limit string) {
 	}
 	// bots can rarely end up repeating the same position
 	if finished < games*95/100 {
-		t.Errorf("%d players, redirect %s, limit %s: only %d of %d games finished", n, redirect, limit, finished, games)
+		t.Errorf("%d players, options %v: only %d of %d games finished", n, options, finished, games)
 	}
 }
 
