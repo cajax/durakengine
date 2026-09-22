@@ -207,27 +207,17 @@ func (b *Bot) selectMatchingTable(c []*Card, otherCards []*Card) []*Card {
 }
 
 func (b *Bot) SelectLeastCardThatBeatOther(g *Game, c []*Card, other *Card) *Card {
-
 	var leastCard *Card
-	leastRank := Ace
-	leastTrump := true
 
 	for _, card := range c {
-		if g.CardCanBeatOther(card, other) {
-			if leastTrump && !g.IsTrump(card) {
-				leastTrump = false
-				leastRank = card.Rank
-				leastCard = card
-				continue
-			}
-			if !leastTrump && g.IsTrump(card) {
-				continue
-			}
-			if leastRank > card.Rank {
-				leastTrump = g.IsTrump(card)
-				leastRank = card.Rank
-				leastCard = card
-			}
+		if !g.CardCanBeatOther(card, other) {
+			continue
+		}
+		// prefer non-trumps, then the lowest rank
+		if leastCard == nil ||
+			g.IsTrump(leastCard) && !g.IsTrump(card) ||
+			g.IsTrump(leastCard) == g.IsTrump(card) && card.Rank < leastCard.Rank {
+			leastCard = card
 		}
 	}
 
