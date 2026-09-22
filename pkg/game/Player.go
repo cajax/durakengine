@@ -21,9 +21,7 @@ func NewPlayer(ID string, skipTurn bool, quitGame bool, abandonedGame bool, Name
 
 // addCards adds card to players hand
 func (p *Player) addCards(cards []*Card) {
-	for i := range cards {
-		p.cards = append(p.cards, cards[i])
-	}
+	p.cards = append(p.cards, cards...)
 }
 
 // removeCard removes card from players hand

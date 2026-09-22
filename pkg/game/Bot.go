@@ -6,8 +6,7 @@ import (
 
 // Simple bot
 type Bot struct {
-	Player           *Player
-	waitForNextCycle bool
+	Player *Player
 }
 
 type CardChoice struct {

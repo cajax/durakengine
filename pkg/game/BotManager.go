@@ -22,10 +22,7 @@ func (b *BotManager) Cycle(g *Game) {
 	if !g.IsStarted() || g.IsOver() {
 		return
 	}
-	for {
-		if g.IsOver() {
-			break
-		}
+	for !g.IsOver() {
 		acted := false
 
 		for _, bot := range b.bots {

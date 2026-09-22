@@ -33,10 +33,7 @@ func (t *Table) clear() {
 }
 
 func (t *Table) IsEmpty() bool {
-	if t.pairs == nil || len(t.pairs) == 0 {
-		return true
-	}
-	return false
+	return len(t.pairs) == 0
 }
 
 func (t *Table) cardMatchesSomeRanks(c *Card) bool {
