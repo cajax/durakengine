@@ -28,6 +28,7 @@ const (
 	ErrorAlreadyDefending                = "Some cards are already beaten"
 	ErrorRedirectRankMismatch            = "Redirect card does not match rank on table"
 	ErrorPlayerAlreadyQuit               = "Player already quit"
+	ErrorNoPlayerToRedirect              = "No player to redirect to"
 )
 
 func (g *Game) StartGame() error {
@@ -230,6 +231,10 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 
 	defenderIndex := g.GetPlayerIndex(defender)
 	_, nextDefender := g.getActivePlayerToTheLeft(defenderIndex)
+
+	if nextDefender == nil || nextDefender == defender {
+		return errors.New(ErrorNoPlayerToRedirect)
+	}
 
 	if len(nextDefender.cards) < len(g.table.GetCardsOnTable())+len(cards) {
 		return errors.New(ErrorAttackIsTooBig)

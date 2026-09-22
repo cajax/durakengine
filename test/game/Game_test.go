@@ -346,3 +346,34 @@ func TestRefillAfterPickupEndsWithDefender(t *testing.T) {
 		t.Error("Expected other players to draw only after attacker")
 	}
 }
+
+func TestGameOverInDraw(t *testing.T) {
+	players := []*game.Player{
+		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{card(game.Six, game.Clubs)}, false, true),
+		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{card(game.Seven, game.Clubs)}, true, false),
+	}
+	deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
+	deck.GetCard()
+	g := game.NewGame(deck, players, map[string]game.Option{}, true, false, game.Table{}, nil)
+
+	mustSucceed(t, g.Attack(players[0], players[0].GetCards()))
+	mustSucceed(t, g.Defend(players[1], 0, card(game.Seven, game.Clubs)))
+	mustSucceed(t, g.EndAttack(players[0]))
+
+	if !g.IsOver() {
+		t.Fatal("Expected game to be over when all players run out of cards")
+	}
+	if lastEventType(g) != game.GameOverEventType {
+		t.Error("Expected game over event to be logged")
+	}
+}
+
+func TestRedirectFailWithNoPlayerToRedirectTo(t *testing.T) {
+	g, p := newTestGame(withRedirect,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Spades), card(game.Ace, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+
+	expectError(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Spades)}), game.ErrorNoPlayerToRedirect)
+}
