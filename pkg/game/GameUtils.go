@@ -214,6 +214,27 @@ func (g *Game) setDefender(p *Player) {
 	}
 }
 
+// cancelTurn clears the table, returning each card to the player who played it
+//
+// Cards of players who quit the game go back to the deck
+func (g *Game) cancelTurn() {
+	for _, pair := range g.table.pairs {
+		g.returnCard(pair.Attacker, pair.Attack)
+		if pair.Defense != nil {
+			g.returnCard(pair.Defender, pair.Defense)
+		}
+	}
+	g.table.clear()
+}
+
+func (g *Game) returnCard(p *Player, c *Card) {
+	if p == nil || p.quitGame {
+		g.deck.AddCard(c)
+		return
+	}
+	p.addCards([]*Card{c})
+}
+
 // detectWinners finds players that have no Cards but still in game
 //
 // TODO see refactoring notes in g.winPlayer

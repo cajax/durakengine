@@ -250,8 +250,10 @@ func (g *Game) Abandon(player *Player) error {
 		for _, card := range player.cards {
 			g.deck.AddCard(card)
 		}
+		player.cards = nil
 	}
 	if player.IsAttacker() || player.IsDefender() {
+		g.cancelTurn()
 		i := g.GetPlayerIndex(player)
 		_, attacker := g.getActivePlayerToTheLeft(i)
 		g.endTurn(attacker)

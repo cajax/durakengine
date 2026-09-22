@@ -198,3 +198,90 @@ func TestRedirectFailWithCardNotInHand(t *testing.T) {
 		t.Errorf("Redirect with a card not in hand should fail with %q, got %v", game.ErrorDefenderHasNoCard, err)
 	}
 }
+
+func hasCard(cards []*game.Card, c *game.Card) bool {
+	for _, card := range cards {
+		if card.Rank == c.Rank && card.Suit == c.Suit {
+			return true
+		}
+	}
+	return false
+}
+
+func newAbandonGame() (*game.Game, []*game.Player) {
+	players := []*game.Player{
+		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{
+			{Suit: game.Clubs, Rank: game.Six},
+			{Suit: game.Hearts, Rank: game.Nine},
+		}, false, true),
+		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{
+			{Suit: game.Clubs, Rank: game.Seven},
+			{Suit: game.Hearts, Rank: game.Ten},
+		}, true, false),
+		game.NewPlayer("3", false, false, false, "Player 3", []*game.Card{
+			{Suit: game.Spades, Rank: game.Ten},
+			{Suit: game.Spades, Rank: game.Jack},
+		}, false, false),
+	}
+	g := game.NewGame(game.NewDeck([]*game.Card{}, &game.Card{Suit: game.Diamonds, Rank: game.King}), players, map[string]game.Option{}, true, false, game.Table{}, &game.BotManager{})
+	return g, players
+}
+
+func TestAbandonByDefenderReturnsCardsToAttacker(t *testing.T) {
+	g, players := newAbandonGame()
+	attack := players[0].GetCards()[0]
+	if err := g.Attack(players[0], []*game.Card{attack}); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.Defend(players[1], 0, players[1].GetCards()[0]); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := g.Abandon(players[1]); err != nil {
+		t.Fatal(err)
+	}
+
+	if !g.GetTable().IsEmpty() {
+		t.Error("Table should be cleared when defender abandons")
+	}
+	if !hasCard(players[0].GetCards(), attack) {
+		t.Error("Attack card should be returned to attacker")
+	}
+	if len(players[1].GetCards()) != 0 {
+		t.Error("Abandoning player should have no cards")
+	}
+	if n := countCards(g); n != 7 {
+		t.Errorf("Expected 7 cards in game after abandon, got %d", n)
+	}
+}
+
+func TestAbandonByAttackerClearsTable(t *testing.T) {
+	g, players := newAbandonGame()
+	if err := g.Attack(players[0], []*game.Card{players[0].GetCards()[0]}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := g.Abandon(players[0]); err != nil {
+		t.Fatal(err)
+	}
+
+	if !g.GetTable().IsEmpty() {
+		t.Error("Table should be cleared when attacker abandons")
+	}
+	if len(players[0].GetCards()) != 0 {
+		t.Error("Abandoning player should have no cards")
+	}
+	if n := countCards(g); n != 7 {
+		t.Errorf("Expected 7 cards in game after abandon, got %d", n)
+	}
+}
+
+// countCards returns number of cards in hands, on table and in deck
+func countCards(g *game.Game) int {
+	deck := g.GetDeck()
+	n := deck.GetCount() + len(g.GetTable().GetCardsOnTable())
+	for _, p := range g.GetPlayers() {
+		n += len(p.GetCards())
+	}
+	return n
+}
