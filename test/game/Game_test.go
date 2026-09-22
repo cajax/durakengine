@@ -309,3 +309,40 @@ func TestGetPairs(t *testing.T) {
 		t.Error("Expected second pair to be unbeaten 6♠")
 	}
 }
+
+func TestRefillAfterDefenseStartsWithAttacker(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Seven, game.Clubs), card(game.Eight, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Seven, game.Clubs)))
+	mustSucceed(t, g.EndAttack(p[0]))
+
+	if g.IsOver() || p[0].HasQuit() {
+		t.Fatal("Attacker should draw the last card from deck and stay in game")
+	}
+	if !hasCard(p[0].GetCards(), card(game.King, game.Hearts)) || len(p[1].GetCards()) != 1 {
+		t.Error("Expected attacker to draw before defender")
+	}
+	if !p[1].IsAttacker() || !p[0].IsDefender() {
+		t.Error("Expected defender to attack next")
+	}
+}
+
+func TestRefillAfterPickupEndsWithDefender(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Seven, game.Clubs), card(game.Eight, game.Clubs), card(game.Nine, game.Clubs), card(game.Ten, game.Clubs), card(game.Jack, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Spades)},
+		[]*game.Card{card(game.Six, game.Diamonds), card(game.Seven, game.Diamonds), card(game.Eight, game.Diamonds), card(game.Nine, game.Diamonds), card(game.Ten, game.Diamonds)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Pickup(p[1]))
+
+	if !hasCard(p[0].GetCards(), card(game.King, game.Hearts)) {
+		t.Error("Expected attacker to draw first")
+	}
+	if len(p[2].GetCards()) != 5 || len(p[1].GetCards()) != 2 {
+		t.Error("Expected other players to draw only after attacker")
+	}
+}

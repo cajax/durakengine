@@ -103,16 +103,23 @@ func (g *Game) checkGameOver() {
 	}
 }
 
-// endTurn ends turn, does count, prepares next turn
-func (g *Game) endTurn(nextAttacker *Player) {
-	g.setAttacker(nextAttacker)
-	_, nextDefender := g.getActivePlayerToTheLeft(g.GetPlayerIndex(nextAttacker))
-	g.setDefender(nextDefender)
-	g.Log.Add(NewEndTurnEvent(*nextAttacker, *nextDefender))
+// endTurn refills hands, detects winners and prepares next turn
+//
+// Next attacker is the first active player starting from the given seat index
+func (g *Game) endTurn(nextAttackerIndex int) {
 	g.RefillUsers()
 	g.detectWinners()
 	g.checkGameOver()
-	//todo finalize game if game is over
+	if g.over {
+		return
+	}
+
+	// getActivePlayerToTheLeft starts looking at the next seat
+	index, nextAttacker := g.getActivePlayerToTheLeft((nextAttackerIndex + len(g.players) - 1) % len(g.players))
+	_, nextDefender := g.getActivePlayerToTheLeft(index)
+	g.setAttacker(nextAttacker)
+	g.setDefender(nextDefender)
+	g.Log.Add(NewEndTurnEvent(*nextAttacker, *nextDefender))
 }
 
 // GetOptions returns game options set during creation

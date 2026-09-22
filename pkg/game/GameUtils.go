@@ -70,28 +70,22 @@ func (g *Game) IsOneOfAttackers(p *Player) bool {
 	return false
 }
 
-// RefillUsers fills hands of attacker, neighbors and then defender
+// RefillUsers fills hands of attacker, other players clockwise and then defender
 func (g *Game) RefillUsers() {
-	// Attacker
-	_, attacker := g.getAttacker()
-	defenderIndex, defender := g.GetDefender()
-	// neighbors and past attackers
-	g.refillUserCards(attacker)
-	for i, player := range g.players {
-		if i == defenderIndex {
-			continue
-		}
-		if !player.quitGame {
+	attackerIndex, _ := g.getAttacker()
+	_, defender := g.GetDefender()
+	for i := range g.players {
+		player := g.players[(attackerIndex+i)%len(g.players)]
+		if player != defender {
 			g.refillUserCards(player)
 		}
 	}
-	// Defender
 	g.refillUserCards(defender)
 }
 
 // refillUserCards adds cards from deck to players hand until it's full
 func (g *Game) refillUserCards(player *Player) {
-	if player.quitGame {
+	if player == nil || player.quitGame {
 		return
 	}
 	var addedCards []Card

@@ -162,11 +162,10 @@ func (g *Game) Pickup(p *Player) error {
 	g.advanceSequence()
 	g.Log.Add(NewPickupEvent(*p, g.table.GetCardsOnTable()))
 
-	i := g.GetPlayerIndex(p)
 	p.addCards(g.table.GetCardsOnTable())
 	g.table.clear()
-	_, attacker := g.getActivePlayerToTheLeft(i)
-	g.endTurn(attacker)
+	// defender loses the turn
+	g.endTurn(g.GetPlayerIndex(p) + 1)
 	return nil
 }
 
@@ -192,8 +191,8 @@ func (g *Game) EndAttack(p *Player) error {
 
 	g.table.clear()
 
-	_, newAttacker := g.getActivePlayerToTheLeft(g.GetPlayerIndex(p))
-	g.endTurn(newAttacker)
+	defenderIndex, _ := g.GetDefender()
+	g.endTurn(defenderIndex)
 
 	return nil
 }
@@ -273,9 +272,7 @@ func (g *Game) Abandon(player *Player) error {
 	}
 	if player.IsAttacker() || player.IsDefender() {
 		g.cancelTurn()
-		i := g.GetPlayerIndex(player)
-		_, attacker := g.getActivePlayerToTheLeft(i)
-		g.endTurn(attacker)
+		g.endTurn(g.GetPlayerIndex(player) + 1)
 	}
 
 	return nil
