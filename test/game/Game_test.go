@@ -57,8 +57,12 @@ func TestAttackFailWithTooManyAddedCards(t *testing.T) {
 		players[0].GetCards()[0],
 	}
 
-	g.Attack(players[0], c1)
-	g.Defend(players[1], 0, players[1].GetCards()[0])
+	if err := g.Attack(players[0], c1); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.Defend(players[1], 0, players[1].GetCards()[0]); err != nil {
+		t.Fatal(err)
+	}
 
 	err := g.Attack(players[2], []*game.Card{
 		players[2].GetCards()[0],

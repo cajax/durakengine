@@ -61,9 +61,7 @@ func (l *Log) GetEvents(firstSeq int, lastSeq int) []EventInterface {
 	}
 
 	for _, eventGroup := range l.Events[firstSeq:lastSeq] {
-		for _, event := range eventGroup {
-			events = append(events, event)
-		}
+		events = append(events, eventGroup...)
 	}
 
 	return events

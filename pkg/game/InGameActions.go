@@ -187,7 +187,7 @@ func (g *Game) EndAttack(p *Player) error {
 	return nil
 }
 
-//Redirect to the left with laying on table card(s) of the same rank
+// Redirect to the left with laying on table card(s) of the same rank
 func (g *Game) Redirect(defender *Player, cards []*Card) error {
 	// todo option name to constant
 	if g.GetOption("with_redirect").Value != "1" {

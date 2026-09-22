@@ -3,15 +3,15 @@ package game
 import (
 	"sort"
 )
+
 // Simple bot
 type Bot struct {
-	Player           *Player
-	waitForNextCycle bool
+	Player *Player
 }
 
 type CardChoice struct {
 	PairIndex int
-	Card *Card
+	Card      *Card
 }
 
 func (b *Bot) newCardChoice(card *Card, i int) *CardChoice {

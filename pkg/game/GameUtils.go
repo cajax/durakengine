@@ -259,7 +259,7 @@ func (g *Game) GetPlayerIndex(p *Player) int {
 	return -1
 }
 
-//CardCanBeatOther checks if first Card is in higher rank or is trump
+// CardCanBeatOther checks if first Card is in higher rank or is trump
 func (g *Game) CardCanBeatOther(card *Card, other *Card) bool {
 	if g.IsTrump(card) && !g.IsTrump(other) {
 		return true
