@@ -1,3 +1,3 @@
 module github.com/cajax/durakengine
 
-go 1.14
+go 1.26
