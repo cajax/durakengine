@@ -289,3 +289,91 @@ func countCards(g *game.Game) int {
 	}
 	return n
 }
+
+func TestGetPairs(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Six, game.Spades)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Eight, game.Clubs)))
+
+	pairs := g.GetPairs()
+	if len(pairs) != 2 {
+		t.Fatalf("Expected 2 pairs, got %d", len(pairs))
+	}
+	if *pairs[0].Attack != *card(game.Six, game.Clubs) || *pairs[0].Defense != *card(game.Eight, game.Clubs) {
+		t.Error("Expected first pair to be 6♣ beaten by 8♣")
+	}
+	if *pairs[1].Attack != *card(game.Six, game.Spades) || pairs[1].Defense != nil {
+		t.Error("Expected second pair to be unbeaten 6♠")
+	}
+}
+
+func TestRefillAfterDefenseStartsWithAttacker(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Seven, game.Clubs), card(game.Eight, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Seven, game.Clubs)))
+	mustSucceed(t, g.EndAttack(p[0]))
+
+	if g.IsOver() || p[0].HasQuit() {
+		t.Fatal("Attacker should draw the last card from deck and stay in game")
+	}
+	if !hasCard(p[0].GetCards(), card(game.King, game.Hearts)) || len(p[1].GetCards()) != 1 {
+		t.Error("Expected attacker to draw before defender")
+	}
+	if !p[1].IsAttacker() || !p[0].IsDefender() {
+		t.Error("Expected defender to attack next")
+	}
+}
+
+func TestRefillAfterPickupEndsWithDefender(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Seven, game.Clubs), card(game.Eight, game.Clubs), card(game.Nine, game.Clubs), card(game.Ten, game.Clubs), card(game.Jack, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Spades)},
+		[]*game.Card{card(game.Six, game.Diamonds), card(game.Seven, game.Diamonds), card(game.Eight, game.Diamonds), card(game.Nine, game.Diamonds), card(game.Ten, game.Diamonds)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Pickup(p[1]))
+
+	if !hasCard(p[0].GetCards(), card(game.King, game.Hearts)) {
+		t.Error("Expected attacker to draw first")
+	}
+	if len(p[2].GetCards()) != 5 || len(p[1].GetCards()) != 2 {
+		t.Error("Expected other players to draw only after attacker")
+	}
+}
+
+func TestGameOverInDraw(t *testing.T) {
+	players := []*game.Player{
+		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{card(game.Six, game.Clubs)}, false, true),
+		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{card(game.Seven, game.Clubs)}, true, false),
+	}
+	deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
+	deck.GetCard()
+	g := game.NewGame(deck, players, map[string]game.Option{}, true, false, game.Table{}, nil)
+
+	mustSucceed(t, g.Attack(players[0], players[0].GetCards()))
+	mustSucceed(t, g.Defend(players[1], 0, card(game.Seven, game.Clubs)))
+	mustSucceed(t, g.EndAttack(players[0]))
+
+	if !g.IsOver() {
+		t.Fatal("Expected game to be over when all players run out of cards")
+	}
+	if lastEventType(g) != game.GameOverEventType {
+		t.Error("Expected game over event to be logged")
+	}
+}
+
+func TestRedirectFailWithNoPlayerToRedirectTo(t *testing.T) {
+	g, p := newTestGame(withRedirect,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Spades), card(game.Ace, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+
+	expectError(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Spades)}), game.ErrorNoPlayerToRedirect)
+}

@@ -8,16 +8,21 @@ import (
 
 var withRedirect = map[string]game.Option{"with_redirect": {Value: "1"}}
 
-func TestAttackFailWhenGameNotInProgress(t *testing.T) {
-	players := []*game.Player{
-		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{card(game.Six, game.Clubs)}, false, true),
-		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{card(game.Seven, game.Clubs)}, true, false),
-	}
-	deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
-
+func TestActionsFailWhenGameNotInProgress(t *testing.T) {
 	for _, state := range []struct{ started, over bool }{{false, false}, {true, true}} {
-		g := game.NewGame(deck, players, map[string]game.Option{}, state.started, state.over, game.Table{}, nil)
+		players := []*game.Player{
+			game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{card(game.Six, game.Clubs)}, false, true),
+			game.NewPlayer("2", false, false, false, "Defender", []*game.Card{card(game.Seven, game.Clubs)}, true, false),
+		}
+		deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
+		g := game.NewGame(deck, players, withRedirect, state.started, state.over, game.Table{}, nil)
+
 		expectError(t, g.Attack(players[0], players[0].GetCards()), game.ErrorNotInPlayingState)
+		expectError(t, g.Defend(players[1], 0, players[1].GetCards()[0]), game.ErrorNotInPlayingState)
+		expectError(t, g.Pickup(players[1]), game.ErrorNotInPlayingState)
+		expectError(t, g.EndAttack(players[0]), game.ErrorNotInPlayingState)
+		expectError(t, g.Redirect(players[1], players[1].GetCards()), game.ErrorNotInPlayingState)
+		expectError(t, g.Abandon(players[0]), game.ErrorNotInPlayingState)
 	}
 }
 
@@ -252,4 +257,44 @@ func TestGameOver(t *testing.T) {
 	if lastEventType(g) != game.GameOverEventType {
 		t.Error("Expected game over event to be logged")
 	}
+}
+
+func TestAttackLimit(t *testing.T) {
+	options := map[string]game.Option{game.OptionMaxAttackCards: {Value: "2"}}
+	g, p := newTestGame(options,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Six, game.Spades), card(game.Six, game.Diamonds)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs), card(game.Ten, game.Clubs), card(game.Jack, game.Clubs)},
+	)
+
+	expectError(t, g.Attack(p[0], p[0].GetCards()), game.ErrorAttackLimitReached)
+
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Eight, game.Clubs)))
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Spades)}))
+
+	// beaten cards count towards the limit
+	expectError(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Diamonds)}), game.ErrorAttackLimitReached)
+}
+
+func TestAttackLimitUnlimited(t *testing.T) {
+	for _, value := range []string{"", "0", "invalid"} {
+		options := map[string]game.Option{game.OptionMaxAttackCards: {Value: value}}
+		g, p := newTestGame(options,
+			[]*game.Card{card(game.Six, game.Clubs), card(game.Six, game.Spades), card(game.Six, game.Diamonds)},
+			[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs), card(game.Ten, game.Clubs)},
+		)
+		mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	}
+}
+
+func TestRedirectRespectsAttackLimit(t *testing.T) {
+	options := map[string]game.Option{"with_redirect": {Value: "1"}, game.OptionMaxAttackCards: {Value: "1"}}
+	g, p := newTestGame(options,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Spades), card(game.Ace, game.Clubs)},
+		[]*game.Card{card(game.Ten, game.Spades), card(game.Jack, game.Spades)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+
+	expectError(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Spades)}), game.ErrorAttackLimitReached)
 }

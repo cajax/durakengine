@@ -106,8 +106,7 @@ func (b *Bot) attack(g *Game) bool {
 }
 
 func (b *Bot) getLeastValuedCardsForAttack(g *Game) []*Card {
-	_, d := g.GetDefender()
-	maxCards := len(d.cards)
+	maxCards := g.attackCapacity()
 	//regular Cards
 	cards := b.selectLeastValuedRank(b.groupCardsByRank(b.selectNonTrumps(b.Player.cards, g.deck.trumpSuit)), maxCards)
 
@@ -124,8 +123,7 @@ func (b *Bot) getLeastValuedCardsForAttack(g *Game) []*Card {
 }
 
 func (b *Bot) getLeastValuedCardsToAdd(g *Game) []*Card {
-	_, d := g.GetDefender()
-	maxCards := len(d.cards)
+	maxCards := g.attackCapacity()
 	return b.selectLeastValuedRank(b.groupCardsByRank(b.selectMatchingTable(b.selectNonTrumps(b.Player.cards, g.deck.trumpSuit), g.table.GetCardsOnTable())), maxCards)
 }
 
@@ -207,27 +205,17 @@ func (b *Bot) selectMatchingTable(c []*Card, otherCards []*Card) []*Card {
 }
 
 func (b *Bot) SelectLeastCardThatBeatOther(g *Game, c []*Card, other *Card) *Card {
-
 	var leastCard *Card
-	leastRank := Ace
-	leastTrump := true
 
 	for _, card := range c {
-		if g.CardCanBeatOther(card, other) {
-			if leastTrump && !g.IsTrump(card) {
-				leastTrump = false
-				leastRank = card.Rank
-				leastCard = card
-				continue
-			}
-			if !leastTrump && g.IsTrump(card) {
-				continue
-			}
-			if leastRank > card.Rank {
-				leastTrump = g.IsTrump(card)
-				leastRank = card.Rank
-				leastCard = card
-			}
+		if !g.CardCanBeatOther(card, other) {
+			continue
+		}
+		// prefer non-trumps, then the lowest rank
+		if leastCard == nil ||
+			g.IsTrump(leastCard) && !g.IsTrump(card) ||
+			g.IsTrump(leastCard) == g.IsTrump(card) && card.Rank < leastCard.Rank {
+			leastCard = card
 		}
 	}
 

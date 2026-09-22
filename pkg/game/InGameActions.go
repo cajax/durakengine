@@ -28,6 +28,8 @@ const (
 	ErrorAlreadyDefending                = "Some cards are already beaten"
 	ErrorRedirectRankMismatch            = "Redirect card does not match rank on table"
 	ErrorPlayerAlreadyQuit               = "Player already quit"
+	ErrorNoPlayerToRedirect              = "No player to redirect to"
+	ErrorAttackLimitReached              = "Attacking with more cards than allowed per turn"
 )
 
 func (g *Game) StartGame() error {
@@ -65,7 +67,7 @@ func (g *Game) initTable(minRank Rank) {
 
 // Attack player if is one of attacker
 func (g *Game) Attack(p *Player, cards []*Card) error {
-	if !g.IsStarted() || g.over {
+	if !g.inProgress() {
 		return errors.New(ErrorNotInPlayingState)
 	}
 	isNeighbor := g.IsOneOfAttackers(p)
@@ -96,6 +98,10 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 		return errors.New(ErrorAttackIsTooBig)
 	}
 
+	if !g.withinAttackLimit(len(cards)) {
+		return errors.New(ErrorAttackLimitReached)
+	}
+
 	if !p.hasCards(cards) {
 		return errors.New(ErrorAttackerHasNoCard)
 	}
@@ -115,6 +121,10 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 // Defend against cards on table if defender
 // todo replace tp by index of tp
 func (g *Game) Defend(p *Player, i int, c *Card) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
+
 	if !p.IsDefender() {
 		return errors.New(ErrorNotDefender)
 	}
@@ -146,6 +156,10 @@ func (g *Game) Defend(p *Player, i int, c *Card) error {
 
 // Pickup collects all cards from table if defender
 func (g *Game) Pickup(p *Player) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
+
 	if !p.IsDefender() {
 		return errors.New(ErrorDefenseByNotDefender)
 	}
@@ -154,16 +168,18 @@ func (g *Game) Pickup(p *Player) error {
 	g.advanceSequence()
 	g.Log.Add(NewPickupEvent(*p, g.table.GetCardsOnTable()))
 
-	i := g.GetPlayerIndex(p)
 	p.addCards(g.table.GetCardsOnTable())
 	g.table.clear()
-	_, attacker := g.getActivePlayerToTheLeft(i)
-	g.endTurn(attacker)
+	// defender loses the turn
+	g.endTurn(g.GetPlayerIndex(p) + 1)
 	return nil
 }
 
 // EndAttack ends turn by attacker
 func (g *Game) EndAttack(p *Player) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
 
 	if !p.IsAttacker() {
 		return errors.New(ErrorGameEndTurnByNotAttacker)
@@ -181,14 +197,18 @@ func (g *Game) EndAttack(p *Player) error {
 
 	g.table.clear()
 
-	_, newAttacker := g.getActivePlayerToTheLeft(g.GetPlayerIndex(p))
-	g.endTurn(newAttacker)
+	defenderIndex, _ := g.GetDefender()
+	g.endTurn(defenderIndex)
 
 	return nil
 }
 
 // Redirect to the left with laying on table card(s) of the same rank
 func (g *Game) Redirect(defender *Player, cards []*Card) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
+
 	// todo option name to constant
 	if g.GetOption("with_redirect").Value != "1" {
 		return errors.New(ErrorNoRedirectsAllowed)
@@ -217,8 +237,16 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 	defenderIndex := g.GetPlayerIndex(defender)
 	_, nextDefender := g.getActivePlayerToTheLeft(defenderIndex)
 
+	if nextDefender == nil || nextDefender == defender {
+		return errors.New(ErrorNoPlayerToRedirect)
+	}
+
 	if len(nextDefender.cards) < len(g.table.GetCardsOnTable())+len(cards) {
 		return errors.New(ErrorAttackIsTooBig)
+	}
+
+	if !g.withinAttackLimit(len(cards)) {
+		return errors.New(ErrorAttackLimitReached)
 	}
 
 	//From here on we no longer expect errors
@@ -237,6 +265,10 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 
 // Abandon the game and put crds from hand into deck
 func (g *Game) Abandon(player *Player) error {
+	if !g.inProgress() {
+		return errors.New(ErrorNotInPlayingState)
+	}
+
 	if player.quitGame {
 		return errors.New(ErrorPlayerAlreadyQuit)
 	}
@@ -254,9 +286,7 @@ func (g *Game) Abandon(player *Player) error {
 	}
 	if player.IsAttacker() || player.IsDefender() {
 		g.cancelTurn()
-		i := g.GetPlayerIndex(player)
-		_, attacker := g.getActivePlayerToTheLeft(i)
-		g.endTurn(attacker)
+		g.endTurn(g.GetPlayerIndex(player) + 1)
 	}
 
 	return nil
