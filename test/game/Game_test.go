@@ -120,3 +120,26 @@ func TestDefendFailWithInvalidPairIndex(t *testing.T) {
 		}
 	}
 }
+
+func TestAttackFailWithDuplicateCard(t *testing.T) {
+	players := []*game.Player{
+		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{
+			{Suit: game.Clubs, Rank: game.Six},
+		}, false, true),
+		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{
+			{Suit: game.Clubs, Rank: game.Seven},
+			{Suit: game.Clubs, Rank: game.Eight},
+		}, true, false),
+	}
+	g := game.NewGame(game.NewDeck([]*game.Card{}, &game.Card{Suit: game.Hearts, Rank: game.King}), players, map[string]game.Option{}, true, false, game.Table{}, &game.BotManager{})
+
+	c := players[0].GetCards()[0]
+	err := g.Attack(players[0], []*game.Card{c, c})
+
+	if err == nil || err.Error() != game.ErrorAttackerHasNoCard {
+		t.Errorf("Attack with the same card twice should fail with %q, got %v", game.ErrorAttackerHasNoCard, err)
+	}
+	if !g.GetTable().IsEmpty() {
+		t.Error("Table should stay empty after a rejected attack")
+	}
+}

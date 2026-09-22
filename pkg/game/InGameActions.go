@@ -96,10 +96,8 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 		return errors.New(ErrorAttackIsTooBig)
 	}
 
-	for _, c := range cards {
-		if !p.hasCard(c) {
-			return errors.New(ErrorAttackerHasNoCard)
-		}
+	if !p.hasCards(cards) {
+		return errors.New(ErrorAttackerHasNoCard)
 	}
 
 	// From here on we no longer expect errors
