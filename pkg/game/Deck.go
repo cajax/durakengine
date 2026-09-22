@@ -3,7 +3,6 @@ package game
 import (
 	"errors"
 	"math/rand"
-	"time"
 )
 
 // Deck with cards and trump
@@ -23,7 +22,6 @@ func NewDeck(cards []*Card, trump *Card) *Deck {
 // GetCard pops random card from deck
 func (d *Deck) GetCard() *Card {
 	if len(d.cards) > 0 {
-		rand.Seed(time.Now().Unix())
 		idx := rand.Intn(len(d.cards))
 		card := d.cards[idx]
 		d.cards = append(d.cards[:idx], d.cards[idx+1:]...)
