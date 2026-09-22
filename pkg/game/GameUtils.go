@@ -136,7 +136,7 @@ func (g *Game) SelectFirstAttacker() {
 	var candidate *Player = nil
 	for i := range g.players {
 		for _, card := range g.players[i].cards {
-			if card.Suit == g.deck.trump.Suit && card.Rank < leastRank {
+			if g.IsTrump(card) && card.Rank < leastRank {
 				candidate = g.players[i]
 				leastRank = card.Rank
 			}

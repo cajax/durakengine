@@ -75,3 +75,25 @@ func TestAttackFailWithTooManyAddedCards(t *testing.T) {
 		t.Error("Adding should fail with too many cards")
 	}
 }
+
+func TestStartGameWhenDealExhaustsDeck(t *testing.T) {
+	var players []*game.Player
+	for i := 0; i < 6; i++ {
+		players = append(players, &game.Player{Name: "Player"})
+	}
+	options := map[string]game.Option{"min_rank": {Value: "6"}}
+	g := game.NewGame(&game.Deck{}, players, options, false, false, game.Table{}, nil)
+
+	if err := g.StartGame(); err != nil {
+		t.Fatal(err)
+	}
+
+	deck := g.GetDeck()
+	if deck.GetCount() != 0 {
+		t.Error("Expected all 36 cards to be dealt")
+	}
+
+	if _, d := g.GetDefender(); d == nil {
+		t.Error("Expected defender to be selected")
+	}
+}
