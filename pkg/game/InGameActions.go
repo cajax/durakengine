@@ -126,7 +126,7 @@ func (g *Game) Defend(p *Player, i int, c *Card) error {
 	}
 
 	if !g.table.HasPair(i) {
-		errors.New(ErrorPairIndexOutOfRange)
+		return errors.New(ErrorPairIndexOutOfRange)
 	}
 	tp := g.table.GetPair(i)
 

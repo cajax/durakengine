@@ -97,3 +97,26 @@ func TestStartGameWhenDealExhaustsDeck(t *testing.T) {
 		t.Error("Expected defender to be selected")
 	}
 }
+
+func TestDefendFailWithInvalidPairIndex(t *testing.T) {
+	players := []*game.Player{
+		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{
+			{Suit: game.Clubs, Rank: game.Six},
+		}, false, true),
+		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{
+			{Suit: game.Clubs, Rank: game.Ace},
+		}, true, false),
+	}
+	g := game.NewGame(game.NewDeck([]*game.Card{}, &game.Card{Suit: game.Hearts, Rank: game.King}), players, map[string]game.Option{}, true, false, game.Table{}, &game.BotManager{})
+
+	if err := g.Attack(players[0], players[0].GetCards()); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, i := range []int{-1, 1} {
+		err := g.Defend(players[1], i, players[1].GetCards()[0])
+		if err == nil || err.Error() != game.ErrorPairIndexOutOfRange {
+			t.Errorf("Defend with pair index %d should fail with %q, got %v", i, game.ErrorPairIndexOutOfRange, err)
+		}
+	}
+}
