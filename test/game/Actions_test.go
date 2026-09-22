@@ -310,3 +310,51 @@ func TestRedirectRespectsAttackLimit(t *testing.T) {
 
 	expectError(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Spades)}), game.ErrorAttackLimitReached)
 }
+
+var withRedirectKeepCard = map[string]game.Option{"with_redirect": {Value: "1"}, game.OptionRedirectKeepCard: {Value: "1"}}
+
+func TestRedirectKeepCard(t *testing.T) {
+	g, p := newTestGame(withRedirectKeepCard,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Hearts), card(game.Ace, game.Clubs)},
+		[]*game.Card{card(game.Ten, game.Spades)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+
+	// next defender has only 1 card, enough to beat the table as shown card is not added
+	mustSucceed(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Hearts)}))
+
+	if !hasCard(p[1].GetCards(), card(game.Six, game.Hearts)) {
+		t.Error("Expected shown card to stay in defender's hand")
+	}
+	if len(g.GetTable().GetPairs()) != 1 {
+		t.Error("Expected shown card not to be put on table")
+	}
+	if !p[1].IsAttacker() || !p[2].IsDefender() {
+		t.Error("Expected attack to move to the next player")
+	}
+
+	events := g.Log.GetEvents(g.GetSequence(), g.GetSequence()+1)
+	if transfer, ok := events[0].(*game.TransferEvent); !ok || !transfer.Shown {
+		t.Error("Expected transfer event marked as shown")
+	}
+}
+
+func TestRedirectKeepCardShowsEachCardOncePerTurn(t *testing.T) {
+	g, p := newTestGame(withRedirectKeepCard,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Six, game.Diamonds)},
+		[]*game.Card{card(game.Six, game.Hearts), card(game.Ace, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Spades), card(game.Ten, game.Spades)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Hearts)}))
+	mustSucceed(t, g.Redirect(p[2], []*game.Card{card(game.Six, game.Spades)}))
+	mustSucceed(t, g.Redirect(p[0], []*game.Card{card(game.Six, game.Diamonds)}))
+
+	expectError(t, g.Redirect(p[1], []*game.Card{card(game.Six, game.Hearts)}), game.ErrorRedirectCardAlreadyShown)
+
+	mustSucceed(t, g.Pickup(p[1]))
+	if len(p[1].GetCards()) != 3 || !hasCard(p[1].GetCards(), card(game.Six, game.Clubs)) {
+		t.Error("Expected defender to pick up only the attack card")
+	}
+}

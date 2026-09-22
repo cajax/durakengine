@@ -138,10 +138,12 @@ type TransferEvent struct {
 	Player       Player  `json:"player"`
 	Cards        []*Card `json:"cards"`
 	NextDefender Player  `json:"next_defender"`
+	// Shown is true when cards were only shown and stayed in player's hand
+	Shown bool `json:"shown"`
 }
 
-func NewTransferEvent(player Player, cards []*Card, nextDefender Player) *TransferEvent {
-	return &TransferEvent{Player: player, Cards: cards, NextDefender: nextDefender, Event: &Event{Type: TransferEventType}}
+func NewTransferEvent(player Player, cards []*Card, nextDefender Player, shown bool) *TransferEvent {
+	return &TransferEvent{Player: player, Cards: cards, NextDefender: nextDefender, Shown: shown, Event: &Event{Type: TransferEventType}}
 }
 
 func (e *TransferEvent) GetCards() []*Card {
