@@ -70,6 +70,27 @@ func TestLogGetEventsOutOfRange(t *testing.T) {
 	}
 }
 
+func TestLogDefensePairIndex(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Six, game.Spades)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Eight, game.Spades)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	mustSucceed(t, g.Defend(p[1], 1, card(game.Eight, game.Spades)))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Eight, game.Clubs)))
+	mustSucceed(t, g.EndAttack(p[0]))
+
+	var indices []int
+	for _, e := range g.Log.GetEvents(1, g.GetSequence()+1) {
+		if d, ok := e.(*game.DefenseEvent); ok {
+			indices = append(indices, d.GetPairIndex())
+		}
+	}
+	if len(indices) != 2 || indices[0] != 1 || indices[1] != 0 {
+		t.Errorf("Expected defense pair indices [1 0], got %v", indices)
+	}
+}
+
 func TestLogDiscard(t *testing.T) {
 	g, p := newTestGame(nil,
 		[]*game.Card{card(game.Six, game.Clubs), card(game.Seven, game.Clubs)},

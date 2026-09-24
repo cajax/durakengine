@@ -61,13 +61,14 @@ func (e *PickupEvent) GetPlayer() Player {
 
 type DefenseEvent struct {
 	*Event
-	Player Player    `json:"player"`
-	Pair   TablePair `json:"pair"`
-	Card   Card      `json:"card"`
+	Player    Player    `json:"player"`
+	Pair      TablePair `json:"pair"`
+	PairIndex int       `json:"pairIndex"`
+	Card      Card      `json:"card"`
 }
 
-func NewDefenseEvent(player Player, pair TablePair, card Card) *DefenseEvent {
-	return &DefenseEvent{Player: player, Pair: pair, Card: card, Event: &Event{Type: DefenseEventType}}
+func NewDefenseEvent(player Player, pair TablePair, pairIndex int, card Card) *DefenseEvent {
+	return &DefenseEvent{Player: player, Pair: pair, PairIndex: pairIndex, Card: card, Event: &Event{Type: DefenseEventType}}
 }
 
 func (e *DefenseEvent) GetPlayer() Player {
@@ -80,6 +81,11 @@ func (e *DefenseEvent) GetCard() Card {
 
 func (e *DefenseEvent) GetPair() TablePair {
 	return e.Pair
+}
+
+// GetPairIndex returns the index of the defended pair on the table at the time of defense
+func (e *DefenseEvent) GetPairIndex() int {
+	return e.PairIndex
 }
 
 type RefillEvent struct {
