@@ -170,3 +170,42 @@ func TestStartGameUsesDefaultMinRank(t *testing.T) {
 		t.Errorf("Expected 36 cards deck by default, got %d cards left", deck.GetCount())
 	}
 }
+
+func TestStartGameTwiceFails(t *testing.T) {
+	g := newUnstartedGame(2)
+	mustSucceed(t, g.StartGame())
+
+	hands := func() [][]game.Card {
+		var hands [][]game.Card
+		for _, p := range g.GetPlayers() {
+			var hand []game.Card
+			for _, c := range p.GetCards() {
+				hand = append(hand, *c)
+			}
+			hands = append(hands, hand)
+		}
+		return hands
+	}
+	before := hands()
+	deck := g.GetDeck()
+	deckCount := deck.GetCount()
+	sequence := g.GetSequence()
+
+	expectError(t, g.StartGame(), game.ErrorGameAlreadyStarted)
+
+	after := hands()
+	for i := range before {
+		if !slices.Equal(before[i], after[i]) {
+			t.Errorf("Expected hand of player %d to be unchanged", i)
+		}
+	}
+	deck = g.GetDeck()
+	if deck.GetCount() != deckCount || g.GetSequence() != sequence {
+		t.Error("Expected deck and sequence to be unchanged")
+	}
+}
+
+func TestStartGameFailsWhenOver(t *testing.T) {
+	g := game.NewGame(&game.Deck{}, []*game.Player{{Name: "Player"}, {Name: "Player"}}, map[string]game.Option{}, false, true, game.Table{}, nil)
+	expectError(t, g.StartGame(), game.ErrorGameAlreadyStarted)
+}
