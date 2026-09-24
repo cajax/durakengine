@@ -2,6 +2,7 @@ package game
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 
 	"github.com/cajax/durakengine/pkg/game"
@@ -36,6 +37,36 @@ func TestLogSequence(t *testing.T) {
 
 	if len(g.Log.GetEvents(0, 100)) != 2 {
 		t.Error("Expected out of range bounds to be clamped")
+	}
+}
+
+func TestLogGetEventsOutOfRange(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Eight, game.Clubs)))
+	n := len(g.Log.Events)
+
+	cases := []struct {
+		first, last, expected int
+	}{
+		{n + 1, n + 1, 0},
+		{n + 2, n + 10, 0},
+		{math.MaxInt, math.MinInt, 0},
+		{math.MinInt, math.MaxInt, 2},
+		{n, n, 1},
+	}
+	for _, c := range cases {
+		if events := g.Log.GetEvents(c.first, c.last); len(events) != c.expected {
+			t.Errorf("GetEvents(%d, %d): expected %d events, got %d", c.first, c.last, c.expected, len(events))
+		}
+	}
+
+	empty := game.NewLog()
+	if events := empty.GetEvents(2, 1); len(events) != 0 {
+		t.Errorf("Expected no events from empty log, got %v", events)
 	}
 }
 
