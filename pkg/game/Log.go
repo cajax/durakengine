@@ -47,20 +47,27 @@ func (l *Log) Add(e EventInterface) {
 
 func (l *Log) GetEvents(firstSeq int, lastSeq int) []EventInterface {
 	events := []EventInterface{}
-	firstSeq--
-	lastSeq--
-	if firstSeq < 0 {
-		firstSeq = 0
+
+	// Convert to 0-based bounds without decrementing, so MinInt can't wrap
+	lo, hi := 0, 0
+	if firstSeq > 0 {
+		lo = firstSeq - 1
 	}
-	if firstSeq >= lastSeq {
-		lastSeq = firstSeq + 1
+	if lastSeq > 0 {
+		hi = lastSeq - 1
+	}
+	if lo >= hi {
+		hi = lo + 1
 	}
 
-	if lastSeq > len(l.Events) {
-		lastSeq = len(l.Events)
+	if lo >= len(l.Events) {
+		return events
+	}
+	if hi > len(l.Events) {
+		hi = len(l.Events)
 	}
 
-	for _, eventGroup := range l.Events[firstSeq:lastSeq] {
+	for _, eventGroup := range l.Events[lo:hi] {
 		events = append(events, eventGroup...)
 	}
 
