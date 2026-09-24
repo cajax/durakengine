@@ -169,7 +169,7 @@ func (g *Game) Defend(p *Player, i int, c *Card) error {
 	g.advanceSequence()
 	g.table.defend(p, tp, c)
 	p.removeCard(c)
-	g.Log.Add(NewDefenseEvent(p.snapshot(), *tp, *c))
+	g.Log.Add(NewDefenseEvent(p.snapshot(), *tp, i, *c))
 	return nil
 }
 
