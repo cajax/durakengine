@@ -38,6 +38,10 @@ const (
 )
 
 func (g *Game) StartGame() error {
+	if g.IsStarted() || g.over {
+		return errors.New(ErrorGameAlreadyStarted)
+	}
+
 	if len(g.players) < 2 {
 		return errors.New(ErrorTooFewPlayers)
 	}
