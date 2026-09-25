@@ -35,6 +35,7 @@ const (
 	ErrorNoPlayerToRedirect              = "No player to redirect to"
 	ErrorAttackLimitReached              = "Attacking with more cards than allowed per turn"
 	ErrorRedirectCardAlreadyShown        = "Card was already shown to redirect in this turn"
+	ErrorPickupFromEmptyTable            = "Can not pick up from an empty table"
 )
 
 func (g *Game) StartGame() error {
@@ -181,6 +182,10 @@ func (g *Game) Pickup(p *Player) error {
 
 	if !p.IsDefender() {
 		return errors.New(ErrorDefenseByNotDefender)
+	}
+
+	if g.table.IsEmpty() {
+		return errors.New(ErrorPickupFromEmptyTable)
 	}
 
 	//From here on we no longer expect errors

@@ -383,6 +383,21 @@ func TestGameOverWhenDefenderBeatsLastCard(t *testing.T) {
 	}
 }
 
+func TestPickupFromEmptyTable(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Six, game.Spades)},
+	)
+	expectError(t, g.Pickup(p[1]), game.ErrorPickupFromEmptyTable)
+
+	if !p[0].IsAttacker() || !p[1].IsDefender() {
+		t.Error("Expected roles to stay unchanged after refused pickup")
+	}
+	if len(p[1].GetCards()) != 1 || p[1].IsSkipTurn() {
+		t.Error("Expected defender to be unaffected by refused pickup")
+	}
+}
+
 func TestPickupSkipsTurn(t *testing.T) {
 	g, p := newTestGame(nil,
 		[]*game.Card{card(game.Six, game.Clubs), card(game.Seven, game.Clubs)},
