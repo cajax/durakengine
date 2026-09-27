@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/cajax/durakengine/pkg/game"
@@ -28,6 +29,11 @@ func expectError(t *testing.T, err error, expected string) {
 	t.Helper()
 	if err == nil || err.Error() != expected {
 		t.Errorf("Expected error %q, got %v", expected, err)
+		return
+	}
+	var ruleErr *game.RuleError
+	if !errors.As(err, &ruleErr) {
+		t.Errorf("Expected a *game.RuleError, got %T", err)
 	}
 }
 

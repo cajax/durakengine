@@ -1,7 +1,6 @@
 package game
 
 import (
-	"errors"
 	"maps"
 	"slices"
 )
@@ -40,27 +39,27 @@ const (
 
 func (g *Game) StartGame() error {
 	if g.IsStarted() || g.over {
-		return errors.New(ErrorGameAlreadyStarted)
+		return ErrGameAlreadyStarted
 	}
 
 	if len(g.players) < 2 {
-		return errors.New(ErrorTooFewPlayers)
+		return ErrTooFewPlayers
 	}
 
 	if len(g.players) > 6 {
-		return errors.New(ErrorTooManyPlayers)
+		return ErrTooManyPlayers
 	}
 
 	minRank := Six
 	if value := g.GetOption(OptionMinRank).Value; value != "" {
 		minRank = RankFromString(value)
 		if minRank < Two || minRank > Ace {
-			return errors.New(ErrorInvalidMinRank)
+			return ErrInvalidMinRank
 		}
 	}
 
 	if deckSize(minRank) < len(g.players)*handSize {
-		return errors.New(ErrorDeckTooSmall)
+		return ErrDeckTooSmall
 	}
 
 	g.initTable(minRank)
@@ -89,26 +88,26 @@ func (g *Game) initTable(minRank Rank) {
 // Attack player if is one of attacker
 func (g *Game) Attack(p *Player, cards []*Card) error {
 	if !g.inProgress() {
-		return errors.New(ErrorNotInPlayingState)
+		return ErrNotInPlayingState
 	}
 	isNeighbor := g.IsOneOfAttackers(p)
 
 	if p.IsAttacker() {
 		if g.table.IsEmpty() && !g.CardsOfSameRank(cards) {
-			return errors.New(ErrorFirstAttackWithDifferentRanks)
+			return ErrFirstAttackWithDifferentRanks
 		}
 	} else if isNeighbor {
 		if g.table.IsEmpty() {
-			return errors.New(ErrorFirstAttackByNeighbor)
+			return ErrFirstAttackByNeighbor
 		}
 	} else {
-		return errors.New(ErrorAttackByWrongPlayer)
+		return ErrAttackByWrongPlayer
 	}
 
 	if !g.table.IsEmpty() {
 		for _, c := range cards {
 			if !g.table.cardMatchesSomeRanks(c) {
-				return errors.New(ErrorAttackRankNotOnTable)
+				return ErrAttackRankNotOnTable
 			}
 		}
 	}
@@ -116,15 +115,15 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 	_, defender := g.GetDefender()
 
 	if len(defender.cards) < len(cards)+len(g.table.GetCardsToBeat()) {
-		return errors.New(ErrorAttackIsTooBig)
+		return ErrAttackIsTooBig
 	}
 
 	if !g.withinAttackLimit(len(cards)) {
-		return errors.New(ErrorAttackLimitReached)
+		return ErrAttackLimitReached
 	}
 
 	if !p.hasCards(cards) {
-		return errors.New(ErrorAttackerHasNoCard)
+		return ErrAttackerHasNoCard
 	}
 
 	// From here on we no longer expect errors
@@ -142,28 +141,28 @@ func (g *Game) Attack(p *Player, cards []*Card) error {
 // Defend against cards on table if defender
 func (g *Game) Defend(p *Player, i int, c *Card) error {
 	if !g.inProgress() {
-		return errors.New(ErrorNotInPlayingState)
+		return ErrNotInPlayingState
 	}
 
 	if !p.IsDefender() {
-		return errors.New(ErrorNotDefender)
+		return ErrNotDefender
 	}
 
 	if !p.hasCard(c) {
-		return errors.New(ErrorDefenderHasNoCard)
+		return ErrDefenderHasNoCard
 	}
 
 	if !g.table.HasPair(i) {
-		return errors.New(ErrorPairIndexOutOfRange)
+		return ErrPairIndexOutOfRange
 	}
 	tp := g.table.GetPair(i)
 
 	if tp.Defender != nil {
-		return errors.New(ErrorAlreadyDefended)
+		return ErrAlreadyDefended
 	}
 
 	if !g.CardCanBeatOther(c, tp.Attack) {
-		return errors.New(ErrorCardCantBeat)
+		return ErrCardCantBeat
 	}
 
 	// From here on we no longer expect errors
@@ -177,15 +176,15 @@ func (g *Game) Defend(p *Player, i int, c *Card) error {
 // Pickup collects all cards from table if defender
 func (g *Game) Pickup(p *Player) error {
 	if !g.inProgress() {
-		return errors.New(ErrorNotInPlayingState)
+		return ErrNotInPlayingState
 	}
 
 	if !p.IsDefender() {
-		return errors.New(ErrorDefenseByNotDefender)
+		return ErrDefenseByNotDefender
 	}
 
 	if g.table.IsEmpty() {
-		return errors.New(ErrorPickupFromEmptyTable)
+		return ErrPickupFromEmptyTable
 	}
 
 	//From here on we no longer expect errors
@@ -202,18 +201,18 @@ func (g *Game) Pickup(p *Player) error {
 // EndAttack ends turn by attacker
 func (g *Game) EndAttack(p *Player) error {
 	if !g.inProgress() {
-		return errors.New(ErrorNotInPlayingState)
+		return ErrNotInPlayingState
 	}
 
 	if !p.IsAttacker() {
-		return errors.New(ErrorGameEndTurnByNotAttacker)
+		return ErrGameEndTurnByNotAttacker
 	}
 	if g.table.IsEmpty() {
-		return errors.New(ErrorGameEndTurnWithoutAttack)
+		return ErrGameEndTurnWithoutAttack
 	}
 
 	if g.table.HasUnbeatenCards() {
-		return errors.New(ErrorGameEndTurnWithoutUnbeatenCards)
+		return ErrGameEndTurnWithoutUnbeatenCards
 	}
 
 	// From here on we no longer expect errors
@@ -231,38 +230,38 @@ func (g *Game) EndAttack(p *Player) error {
 // Redirect to the left with laying on table card(s) of the same rank
 func (g *Game) Redirect(defender *Player, cards []*Card) error {
 	if !g.inProgress() {
-		return errors.New(ErrorNotInPlayingState)
+		return ErrNotInPlayingState
 	}
 
 	if g.GetOption(OptionRedirect).Value != "1" {
-		return errors.New(ErrorNoRedirectsAllowed)
+		return ErrNoRedirectsAllowed
 	}
 
 	if !defender.IsDefender() {
-		return errors.New(ErrorNotDefender)
+		return ErrNotDefender
 	}
 
 	if len(cards) < 1 || !g.CardsOfSameRank(cards) {
-		return errors.New(ErrorRedirectWithNoOrMixedCards)
+		return ErrRedirectWithNoOrMixedCards
 	}
 
 	if !defender.hasCards(cards) {
-		return errors.New(ErrorDefenderHasNoCard)
+		return ErrDefenderHasNoCard
 	}
 
 	if g.table.defenseStarted() {
-		return errors.New(ErrorAlreadyDefending)
+		return ErrAlreadyDefending
 	}
 
 	if !g.table.cardMatchesAttackRank(cards[0]) {
-		return errors.New(ErrorRedirectRankMismatch)
+		return ErrRedirectRankMismatch
 	}
 
 	defenderIndex := g.GetPlayerIndex(defender)
 	_, nextDefender := g.getActivePlayerToTheLeft(defenderIndex)
 
 	if nextDefender == nil || nextDefender == defender {
-		return errors.New(ErrorNoPlayerToRedirect)
+		return ErrNoPlayerToRedirect
 	}
 
 	// shown cards stay in defender's hand
@@ -272,17 +271,17 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 		addedCards = 0
 		for _, card := range cards {
 			if g.table.wasShown(card) {
-				return errors.New(ErrorRedirectCardAlreadyShown)
+				return ErrRedirectCardAlreadyShown
 			}
 		}
 	}
 
 	if len(nextDefender.cards) < len(g.table.GetCardsOnTable())+addedCards {
-		return errors.New(ErrorAttackIsTooBig)
+		return ErrAttackIsTooBig
 	}
 
 	if !g.withinAttackLimit(addedCards) {
-		return errors.New(ErrorAttackLimitReached)
+		return ErrAttackLimitReached
 	}
 
 	//From here on we no longer expect errors
@@ -307,11 +306,11 @@ func (g *Game) Redirect(defender *Player, cards []*Card) error {
 // Abandon the game and put crds from hand into deck
 func (g *Game) Abandon(player *Player) error {
 	if !g.inProgress() {
-		return errors.New(ErrorNotInPlayingState)
+		return ErrNotInPlayingState
 	}
 
 	if player.quitGame {
-		return errors.New(ErrorPlayerAlreadyQuit)
+		return ErrPlayerAlreadyQuit
 	}
 
 	g.advanceSequence()

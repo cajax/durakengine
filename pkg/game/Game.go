@@ -1,7 +1,6 @@
 package game
 
 import (
-	"errors"
 	"maps"
 	"math/rand/v2"
 )
@@ -19,7 +18,10 @@ type Game struct {
 	Log        Log
 }
 
-const ErrorGameAlreadyStarted = "Game is already started"
+const (
+	ErrorGameAlreadyStarted   = "Game is already started"
+	ErrorAddPlayerWhileInGame = "cannot_add_player_while_in_game"
+)
 
 // NewGame makes new game state
 func NewGame(deck *Deck, players []*Player, options map[string]Option, started bool, over bool, table Table, botManager *BotManager) *Game {
@@ -51,7 +53,7 @@ func (g *Game) GetSequence() int {
 // Global source is used if nil. Use seeded source to make games reproducible
 func (g *Game) SetRandom(r *rand.Rand) error {
 	if g.IsStarted() {
-		return errors.New(ErrorGameAlreadyStarted)
+		return ErrGameAlreadyStarted
 	}
 	g.rng = r
 	return nil
@@ -60,7 +62,7 @@ func (g *Game) SetRandom(r *rand.Rand) error {
 // SetPlayers sets list of players to game
 func (g *Game) SetPlayers(players []*Player) error {
 	if g.IsStarted() {
-		return errors.New(ErrorGameAlreadyStarted)
+		return ErrGameAlreadyStarted
 	}
 
 	g.players = players

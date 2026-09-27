@@ -1,7 +1,6 @@
 package game
 
 import (
-	"errors"
 	"math/rand/v2"
 )
 
@@ -102,5 +101,5 @@ func (d *Deck) GetTrump() (Card, error) {
 	if d.trump != nil {
 		return *d.trump, nil
 	}
-	return Card{}, errors.New(ErrorDeckNoTrump)
+	return Card{}, ErrDeckNoTrump
 }
