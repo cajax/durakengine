@@ -179,3 +179,24 @@ func (e *DiscardEvent) GetCards() []*Card {
 func (e *DiscardEvent) GetPlayer() Player {
 	return e.Player
 }
+
+// ReturnEvent lists the cards a cancelled turn gave back to the player who played them
+type ReturnEvent struct {
+	*Event
+	Player Player  `json:"player"`
+	Cards  []*Card `json:"cards"`
+	// ToDeck is true when cards went into the deck because the player has quit
+	ToDeck bool `json:"to_deck"`
+}
+
+func NewReturnEvent(player Player, cards []*Card, toDeck bool) *ReturnEvent {
+	return &ReturnEvent{Player: player, Cards: cards, ToDeck: toDeck, Event: &Event{Type: ReturnEventType}}
+}
+
+func (e *ReturnEvent) GetCards() []*Card {
+	return e.Cards
+}
+
+func (e *ReturnEvent) GetPlayer() Player {
+	return e.Player
+}

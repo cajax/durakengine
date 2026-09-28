@@ -13,6 +13,7 @@ const (
 	EndTurnEventType  = "end_turn"
 	GameOverEventType = "game_over"
 	AbandonEventType  = "abandon"
+	ReturnEventType   = "return"
 )
 
 type Log struct {

@@ -231,17 +231,35 @@ func (g *Game) setDefender(p *Player) {
 
 // cancelTurn clears the table, returning each card to the player who played it
 //
-// Cards of players who quit the game go back to the deck
+// Cards of players who quit the game go back to the deck. A return event per player lists the cards in table order
 func (g *Game) cancelTurn() {
+	var owners []*Player
+	returned := map[*Player][]*Card{}
+	returnCard := func(p *Player, c *Card) {
+		if _, ok := returned[p]; !ok {
+			owners = append(owners, p)
+		}
+		returned[p] = append(returned[p], c)
+		g.returnCard(p, c)
+	}
 	for _, pair := range g.table.pairs {
-		g.returnCard(pair.Attacker, pair.Attack)
+		returnCard(pair.Attacker, pair.Attack)
 		if pair.Defense != nil {
-			g.returnCard(pair.Defender, pair.Defense)
+			returnCard(pair.Defender, pair.Defense)
 		}
 	}
 	g.table.clear()
+
+	for _, p := range owners {
+		var player Player
+		if p != nil {
+			player = p.snapshot()
+		}
+		g.Log.Add(NewReturnEvent(player, returned[p], p == nil || p.quitGame))
+	}
 }
 
+// returnCard gives card back to the player who played it, or puts it into the deck if the player has quit
 func (g *Game) returnCard(p *Player, c *Card) {
 	if p == nil || p.quitGame {
 		g.deck.AddCard(c)
