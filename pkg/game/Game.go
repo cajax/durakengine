@@ -76,6 +76,7 @@ func (g *Game) endGame(loser *Player) {
 	g.over = true
 	if loser != nil {
 		loser.lostGame = true
+		loser.place = g.nextWinnerPlace()
 	}
 	g.setAttacker(nil)
 	g.setDefender(nil)
@@ -93,20 +94,25 @@ func (g *Game) inProgress() bool {
 	return g.started && !g.over
 }
 
-// winPlayer marks player as winner
+// winPlayer marks player as winner finishing at given place
 //
-// also marks player as first to win if applicable
-func (g *Game) winPlayer(p *Player) {
+// Players finishing first are first winners
+func (g *Game) winPlayer(p *Player, place int) {
 	p.quitGame = true
-	firstToWin := true
+	p.wonGame = true
+	p.place = place
+	p.firstWinner = place == 1
+}
+
+// nextWinnerPlace is the place of players going out now: 1 + number of winners so far
+func (g *Game) nextWinnerPlace() int {
+	place := 1
 	for _, p := range g.players {
 		if p.wonGame {
-			firstToWin = false
-			break
+			place++
 		}
 	}
-	p.firstWinner = firstToWin
-	p.wonGame = true
+	return place
 }
 
 // checkGameOver checks if only one active player left
@@ -127,7 +133,7 @@ func (g *Game) checkGameOver(abandoned bool) {
 	var loser *Player
 	if len(activePlayers) == 1 {
 		if abandoned {
-			g.winPlayer(activePlayers[0])
+			g.winPlayer(activePlayers[0], g.nextWinnerPlace())
 		} else {
 			loser = activePlayers[0]
 		}

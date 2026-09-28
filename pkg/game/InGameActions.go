@@ -315,9 +315,18 @@ func (g *Game) Abandon(player *Player) error {
 
 	g.advanceSequence()
 
+	// abandoners finish last, the earliest one at the very end
+	place := len(g.players)
+	for _, p := range g.players {
+		if p.abandonedGame {
+			place--
+		}
+	}
+
 	cards := player.cards
 	player.quitGame = true
 	player.abandonedGame = true
+	player.place = place
 	for _, card := range cards {
 		g.deck.AddCard(card)
 	}

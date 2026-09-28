@@ -17,6 +17,7 @@ type Player struct {
 	firstWinner   bool
 	lostGame      bool
 	abandonedGame bool
+	place         int
 	Name          string
 	cards         []*Card
 	defender      bool
@@ -35,6 +36,7 @@ type playerJSON struct {
 	FirstWinner   bool    `json:"first_winner"`
 	LostGame      bool    `json:"lost_game"`
 	AbandonedGame bool    `json:"abandoned_game"`
+	Place         int     `json:"place"`
 }
 
 // MarshalJSON serializes player including hand and state
@@ -51,6 +53,7 @@ func (p Player) MarshalJSON() ([]byte, error) {
 		FirstWinner:   p.firstWinner,
 		LostGame:      p.lostGame,
 		AbandonedGame: p.abandonedGame,
+		Place:         p.place,
 	})
 }
 
@@ -127,7 +130,15 @@ func (p *Player) HasWon() bool {
 	return p.wonGame
 }
 
-// IsFirstWinner is true when player was the first to get rid of all cards
+// Place is player's finishing place, 0 while still in game
+//
+// Players who go out on the same turn end share a place. The loser comes after
+// all winners and abandoners come last, the earliest abandoner at the very end
+func (p *Player) Place() int {
+	return p.place
+}
+
+// IsFirstWinner is true when player finished first. Players going out together share first place
 func (p *Player) IsFirstWinner() bool {
 	return p.firstWinner
 }
