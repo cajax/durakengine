@@ -2,8 +2,10 @@ package game
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"math/rand/v2"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -290,4 +292,120 @@ func TestEveryEventOfBotGameHasTime(t *testing.T) {
 			}
 		}
 	}
+}
+
+// abandonReturns describes the return events logged after the last abandon, in order, as "player to_deck cards"
+func abandonReturns(t *testing.T, g *game.Game) []string {
+	t.Helper()
+	for i := len(g.Log.Events) - 1; i >= 0; i-- {
+		abandoned := false
+		var returns []string
+		for _, e := range g.Log.Events[i] {
+			switch e := e.(type) {
+			case *game.AbandonEvent:
+				abandoned = true
+			case *game.ReturnEvent:
+				if !abandoned {
+					t.Fatal("Expected return events after the abandon event")
+				}
+				var cards []game.Card
+				for _, c := range e.GetCards() {
+					cards = append(cards, *c)
+				}
+				returns = append(returns, fmt.Sprintf("%s %v %v", e.GetPlayer().ID, e.ToDeck, cards))
+			}
+		}
+		if abandoned {
+			return returns
+		}
+	}
+	t.Fatal("Expected abandon event")
+	return nil
+}
+
+func expectReturns(t *testing.T, got []string, expected ...string) {
+	t.Helper()
+	if !slices.Equal(got, expected) {
+		t.Errorf("Expected return events %q, got %q", expected, got)
+	}
+}
+
+func TestAbandonByAttackerLogsReturnedCards(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Six, game.Spades), card(game.Seven, game.Diamonds)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Diamonds)},
+		[]*game.Card{card(game.Ten, game.Spades)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs), card(game.Six, game.Spades)}))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Eight, game.Clubs)))
+	mustSucceed(t, g.Abandon(p[0]))
+
+	if g.IsOver() {
+		t.Fatal("Expected game to go on")
+	}
+	c := func(r game.Rank, s game.Suit) game.Card { return *card(r, s) }
+	expectReturns(t, abandonReturns(t, g),
+		fmt.Sprintf("1 true %v", []game.Card{c(game.Six, game.Clubs), c(game.Six, game.Spades)}),
+		fmt.Sprintf("2 false %v", []game.Card{c(game.Eight, game.Clubs)}),
+	)
+}
+
+func TestAbandonByDefenderLogsReturnedCards(t *testing.T) {
+	g, p := newTestGame(map[string]game.Option{game.OptionThrowIn: {Value: "1"}},
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Nine, game.Diamonds)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Seven, game.Diamonds)},
+		[]*game.Card{card(game.Six, game.Spades), card(game.Ten, game.Diamonds)},
+		[]*game.Card{card(game.Jack, game.Spades)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Attack(p[2], []*game.Card{card(game.Six, game.Spades)}))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Eight, game.Clubs)))
+	mustSucceed(t, g.Abandon(p[1]))
+
+	c := func(r game.Rank, s game.Suit) game.Card { return *card(r, s) }
+	expectReturns(t, abandonReturns(t, g),
+		fmt.Sprintf("1 false %v", []game.Card{c(game.Six, game.Clubs)}),
+		fmt.Sprintf("2 true %v", []game.Card{c(game.Eight, game.Clubs)}),
+		fmt.Sprintf("3 false %v", []game.Card{c(game.Six, game.Spades)}),
+	)
+}
+
+func TestReturnEventShowsHandWithReturnedCards(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Nine, game.Diamonds)},
+		[]*game.Card{card(game.Eight, game.Clubs)},
+		[]*game.Card{card(game.Ten, game.Spades)},
+	)
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Abandon(p[1]))
+
+	events := g.Log.Events[len(g.Log.Events)-1]
+	for _, e := range events {
+		if e, ok := e.(*game.ReturnEvent); ok {
+			player := e.GetPlayer()
+			if !hasCard(player.GetCards(), card(game.Six, game.Clubs)) {
+				t.Errorf("Expected returned card in player's hand, got %v", player.GetCards())
+			}
+			data, err := json.Marshal(e)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(data), `"type":"return"`) || !strings.Contains(string(data), `"to_deck":false`) {
+				t.Errorf("Expected return type and to_deck in JSON, got %s", data)
+			}
+			return
+		}
+	}
+	t.Fatal("Expected return event")
+}
+
+func TestAbandonWithEmptyTableLogsNoReturn(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Eight, game.Clubs)},
+		[]*game.Card{card(game.Ten, game.Spades)},
+	)
+	mustSucceed(t, g.Abandon(p[0]))
+
+	expectReturns(t, abandonReturns(t, g))
 }
