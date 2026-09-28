@@ -74,6 +74,8 @@ func (g *Game) initTable(minRank Rank) {
 	g.deck = Deck{rng: g.rng}
 
 	g.deck.ResetDeck(minRank)
+	// the deal can take the trump card too when players share the whole deck
+	trump := *g.deck.trump
 	g.SpreadCards()
 	g.SelectFirstAttacker()
 	g.selectDefender()
@@ -82,7 +84,7 @@ func (g *Game) initTable(minRank Rank) {
 
 	_, attacker := g.getAttacker()
 	_, defender := g.GetDefender()
-	g.Log.Add(NewStartEvent(g.deck.GetCount(), minRank, attacker.snapshot(), defender.snapshot(), *g.deck.trumpSuit, maps.Clone(g.options)))
+	g.Log.Add(NewStartEvent(g.deck.GetCount(), minRank, attacker.snapshot(), defender.snapshot(), *g.deck.trumpSuit, trump, maps.Clone(g.options)))
 }
 
 // Attack player if is one of attacker

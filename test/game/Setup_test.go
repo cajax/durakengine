@@ -1,8 +1,11 @@
 package game
 
 import (
+	"encoding/json"
+	"fmt"
 	"math/rand/v2"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/cajax/durakengine/pkg/game"
@@ -208,4 +211,76 @@ func TestStartGameTwiceFails(t *testing.T) {
 func TestStartGameFailsWhenOver(t *testing.T) {
 	g := game.NewGame(&game.Deck{}, []*game.Player{{Name: "Player"}, {Name: "Player"}}, map[string]game.Option{}, false, true, game.Table{}, nil)
 	expectError(t, g.StartGame(), game.ErrorGameAlreadyStarted)
+}
+
+func startEvent(t *testing.T, g *game.Game) *game.StartEvent {
+	t.Helper()
+	for _, e := range g.Log.GetEvents(1, 2) {
+		if event, ok := e.(*game.StartEvent); ok {
+			return event
+		}
+	}
+	t.Fatal("Expected start event in first sequence")
+	return nil
+}
+
+func TestStartEventRecordsTrumpCard(t *testing.T) {
+	g := newUnstartedGame(4)
+	mustSucceed(t, g.SetRandom(rand.New(rand.NewPCG(1, 0))))
+	mustSucceed(t, g.StartGame())
+
+	deck := g.GetDeck()
+	trump, err := deck.GetTrump()
+	mustSucceed(t, err)
+	event := startEvent(t, g)
+	if event.TrumpCard != trump {
+		t.Errorf("Expected trump card %v in start event, got %v", trump, event.TrumpCard)
+	}
+	if event.TrumpCard.Suit != event.TrumpSuit {
+		t.Errorf("Expected trump card suit %v to match trump suit %v", event.TrumpCard.Suit, event.TrumpSuit)
+	}
+}
+
+func TestStartEventRecordsTrumpCardDealtToPlayer(t *testing.T) {
+	// six players take the whole 36 card deck, trump included
+	g := newUnstartedGame(6)
+	mustSucceed(t, g.SetRandom(rand.New(rand.NewPCG(1, 0))))
+	mustSucceed(t, g.StartGame())
+
+	deck := g.GetDeck()
+	if deck.GetCount() != 0 {
+		t.Fatalf("Expected empty deck, got %d cards", deck.GetCount())
+	}
+	event := startEvent(t, g)
+	if event.TrumpCard.Suit != event.TrumpSuit {
+		t.Errorf("Expected trump card suit %v to match trump suit %v", event.TrumpCard.Suit, event.TrumpSuit)
+	}
+	dealt := false
+	for _, p := range g.GetPlayers() {
+		for _, c := range p.GetCards() {
+			if *c == event.TrumpCard {
+				dealt = true
+			}
+		}
+	}
+	if !dealt {
+		t.Errorf("Expected trump card %v to be dealt to a player", event.TrumpCard)
+	}
+}
+
+func TestStartEventTrumpCardInJSON(t *testing.T) {
+	g := newUnstartedGame(4)
+	mustSucceed(t, g.SetRandom(rand.New(rand.NewPCG(1, 0))))
+	mustSucceed(t, g.StartGame())
+
+	data, err := json.Marshal(startEvent(t, g))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deck := g.GetDeck()
+	trump, _ := deck.GetTrump()
+	expected := fmt.Sprintf(`"trump_card":{"suit":%d,"rank":%d}`, trump.Suit, trump.Rank)
+	if !strings.Contains(string(data), expected) {
+		t.Errorf("Expected %s in start event JSON, got %s", expected, data)
+	}
 }

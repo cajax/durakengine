@@ -7,16 +7,18 @@ type StartEvent struct {
 	FirstAttacker Player            `json:"first_attacker"`
 	FirstDefender Player            `json:"first_defender"`
 	TrumpSuit     Suit              `json:"trump_suit"`
+	TrumpCard     Card              `json:"trump_card"`
 	Options       map[string]Option `json:"Options"`
 }
 
-func NewStartEvent(cardsCount int, minRank Rank, firstAttacker Player, firstDefender Player, trumpSuit Suit, options map[string]Option) *StartEvent {
+func NewStartEvent(cardsCount int, minRank Rank, firstAttacker Player, firstDefender Player, trumpSuit Suit, trumpCard Card, options map[string]Option) *StartEvent {
 	return &StartEvent{
 		CardsCount:    cardsCount,
 		MinRank:       minRank,
 		FirstAttacker: firstAttacker,
 		FirstDefender: firstDefender,
 		TrumpSuit:     trumpSuit,
+		TrumpCard:     trumpCard,
 		Options:       options,
 		Event:         &Event{Type: StartEventType},
 	}
