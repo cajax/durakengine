@@ -3,7 +3,10 @@ package game
 import (
 	"encoding/json"
 	"math"
+	"math/rand/v2"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/cajax/durakengine/pkg/game"
 )
@@ -184,5 +187,107 @@ func TestLogKeepsStateAtTimeOfEvent(t *testing.T) {
 	after, _ := json.Marshal(attack)
 	if string(before) != string(after) {
 		t.Errorf("Expected logged event not to change, before %s, after %s", before, after)
+	}
+}
+
+// stepClock returns a clock starting at given time and moving one second on every read
+func stepClock(start time.Time) func() time.Time {
+	next := start
+	return func() time.Time {
+		now := next
+		next = next.Add(time.Second)
+		return now
+	}
+}
+
+func TestEventsCarryActionTime(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Eight, game.Clubs), card(game.Nine, game.Clubs)},
+	)
+	start := time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)
+	g.SetClock(stepClock(start))
+
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Eight, game.Clubs)))
+	// discard, refill and end of turn are logged by one action
+	mustSucceed(t, g.EndAttack(p[0]))
+
+	if len(g.Log.Events[2]) < 2 {
+		t.Fatalf("Expected several events for ending the attack, got %d", len(g.Log.Events[2]))
+	}
+	for i, group := range g.Log.Events {
+		expected := start.Add(time.Duration(i) * time.Second)
+		for _, e := range group {
+			if !e.GetAt().Equal(expected) {
+				t.Errorf("Expected %s event of action %d at %s, got %s", e.GetType(), i+1, expected, e.GetAt())
+			}
+		}
+	}
+}
+
+func TestEventTimeInJSONIsUTC(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Eight, game.Clubs)},
+	)
+	g.SetClock(func() time.Time {
+		return time.Date(2026, 9, 28, 13, 0, 0, 123000000, time.FixedZone("MSK", 3*60*60))
+	})
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+
+	data, err := json.Marshal(g.Log.GetEvents(1, 2)[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"at":"2026-09-28T10:00:00.123Z"`) {
+		t.Errorf("Expected event time in UTC with milliseconds, got %s", data)
+	}
+}
+
+func TestEventTimeUsesCurrentTimeByDefault(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Eight, game.Clubs)},
+	)
+	before := time.Now()
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	after := time.Now()
+
+	at := g.Log.GetEvents(1, 2)[0].GetAt()
+	if at.IsZero() || at.Before(before.Truncate(time.Millisecond)) || at.After(after) {
+		t.Errorf("Expected event time between %s and %s, got %s", before, after, at)
+	}
+	if at.Location() != time.UTC {
+		t.Errorf("Expected event time in UTC, got %s", at.Location())
+	}
+}
+
+func TestEveryEventOfBotGameHasTime(t *testing.T) {
+	var players []*game.Player
+	var bots []*game.Bot
+	for range 4 {
+		p := &game.Player{Name: "Bot"}
+		players = append(players, p)
+		bots = append(bots, &game.Bot{Player: p})
+	}
+	g := game.NewGame(&game.Deck{}, players, map[string]game.Option{}, false, false, game.Table{}, game.NewBotManager(bots))
+	mustSucceed(t, g.SetRandom(rand.New(rand.NewPCG(1, 2))))
+	start := time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)
+	g.SetClock(stepClock(start))
+
+	mustSucceed(t, g.StartGame())
+	g.CycleBots()
+
+	if !g.IsOver() {
+		t.Fatal("Expected bots to finish the game")
+	}
+	for i, group := range g.Log.Events {
+		expected := start.Add(time.Duration(i) * time.Second)
+		for _, e := range group {
+			if !e.GetAt().Equal(expected) {
+				t.Fatalf("Expected %s event of action %d at %s, got %s", e.GetType(), i+1, expected, e.GetAt())
+			}
+		}
 	}
 }

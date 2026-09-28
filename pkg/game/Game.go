@@ -3,6 +3,7 @@ package game
 import (
 	"maps"
 	"math/rand/v2"
+	"time"
 )
 
 // Game state
@@ -40,6 +41,11 @@ func NewGame(deck *Deck, players []*Player, options map[string]Option, started b
 // advanceSequence increment internal action counter
 func (g *Game) advanceSequence() {
 	g.Log.Advance()
+}
+
+// SetClock sets source of time for logged events. time.Now is used if nil
+func (g *Game) SetClock(clock func() time.Time) {
+	g.Log.clock = clock
 }
 
 // GetSequence returns sequence number for render
