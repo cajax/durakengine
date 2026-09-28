@@ -70,10 +70,17 @@ func (g *Game) SetPlayers(players []*Player) error {
 }
 
 // endGame marks game as over and the last player in game, if any, as loser
+//
+// Also clears turn roles, as nobody has a turn left
 func (g *Game) endGame(loser *Player) {
 	g.over = true
 	if loser != nil {
 		loser.lostGame = true
+	}
+	g.setAttacker(nil)
+	g.setDefender(nil)
+	for _, player := range g.players {
+		player.skipTurn = false
 	}
 }
 
