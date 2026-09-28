@@ -280,6 +280,95 @@ func TestAbandonByAttackerClearsTable(t *testing.T) {
 	}
 }
 
+// expectAbandonWin checks that abandoning left the remaining player as winner and nobody as loser
+func expectAbandonWin(t *testing.T, g *game.Game, stayer *game.Player, abandoner *game.Player, firstWinner bool) {
+	t.Helper()
+	if !g.IsOver() {
+		t.Fatal("Expected game to be over")
+	}
+	if !stayer.HasWon() || stayer.IsFirstWinner() != firstWinner || stayer.IsLoser() {
+		t.Errorf("Expected remaining player to win (first winner %v), got won=%v first=%v loser=%v",
+			firstWinner, stayer.HasWon(), stayer.IsFirstWinner(), stayer.IsLoser())
+	}
+	if !abandoner.HasAbandoned() || abandoner.IsLoser() || abandoner.HasWon() {
+		t.Error("Expected abandoning player to be marked as abandoned only")
+	}
+	events := g.Log.Events[len(g.Log.Events)-1]
+	over, ok := events[len(events)-1].(*game.OverEvent)
+	if !ok {
+		t.Fatal("Expected game over event to be logged")
+	}
+	if len(over.LastPlayers) != 1 || !over.LastPlayers[0].HasWon() {
+		t.Error("Expected game over event to show the remaining player as winner")
+	}
+}
+
+func TestAbandonByDefenderLeavesAttackerAsWinner(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Seven, game.Clubs)},
+	)
+	mustSucceed(t, g.Abandon(p[1]))
+
+	expectAbandonWin(t, g, p[0], p[1], true)
+}
+
+func TestAbandonByAttackerLeavesDefenderAsWinner(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Seven, game.Clubs)},
+	)
+	mustSucceed(t, g.Attack(p[0], p[0].GetCards()))
+	mustSucceed(t, g.Abandon(p[0]))
+
+	expectAbandonWin(t, g, p[1], p[0], true)
+}
+
+func TestAbandonAfterFirstWinnerLeavesRemainingPlayerAsWinner(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs), card(game.Nine, game.Spades)},
+		[]*game.Card{card(game.Seven, game.Clubs)},
+		[]*game.Card{card(game.Ten, game.Spades)},
+	)
+	// defender beats the last card and goes out first
+	mustSucceed(t, g.Attack(p[0], []*game.Card{card(game.Six, game.Clubs)}))
+	mustSucceed(t, g.Defend(p[1], 0, card(game.Seven, game.Clubs)))
+	mustSucceed(t, g.EndAttack(p[0]))
+	if !p[1].IsFirstWinner() || !p[2].IsAttacker() {
+		t.Fatal("Expected defender to win first and third player to attack next")
+	}
+
+	mustSucceed(t, g.Abandon(p[2]))
+
+	expectAbandonWin(t, g, p[0], p[2], false)
+}
+
+func TestLoserAfterEarlierAbandon(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Eight, game.Spades)},
+		[]*game.Card{card(game.Seven, game.Clubs), card(game.Seven, game.Spades), card(game.Seven, game.Diamonds), card(game.Nine, game.Diamonds)},
+		[]*game.Card{card(game.Eight, game.Clubs)},
+	)
+	// the third player draws the abandoned card and the trump
+	mustSucceed(t, g.Abandon(p[0]))
+	if g.IsOver() || !p[1].IsAttacker() || !p[2].IsDefender() || len(p[2].GetCards()) != 3 {
+		t.Fatal("Expected game to go on with second player attacking third")
+	}
+
+	mustSucceed(t, g.Attack(p[1], []*game.Card{card(game.Seven, game.Clubs), card(game.Seven, game.Spades), card(game.Seven, game.Diamonds)}))
+	mustSucceed(t, g.Defend(p[2], 0, card(game.Eight, game.Clubs)))
+	mustSucceed(t, g.Defend(p[2], 1, card(game.Eight, game.Spades)))
+	mustSucceed(t, g.Defend(p[2], 2, card(game.King, game.Hearts)))
+	mustSucceed(t, g.EndAttack(p[1]))
+
+	if !g.IsOver() {
+		t.Fatal("Expected game to be over")
+	}
+	if !p[2].HasWon() || !p[1].IsLoser() || p[0].IsLoser() {
+		t.Error("Expected the player left holding cards to lose after an earlier abandon")
+	}
+}
+
 // countCards returns number of cards in hands, on table and in deck
 func countCards(g *game.Game) int {
 	deck := g.GetDeck()

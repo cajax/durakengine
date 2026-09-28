@@ -194,7 +194,7 @@ func (g *Game) Pickup(p *Player) error {
 	g.Log.Add(NewPickupEvent(p.snapshot(), g.table.GetCardsOnTable()))
 	g.table.clear()
 	// defender loses the turn
-	g.endTurn(g.GetPlayerIndex(p)+1, p)
+	g.endTurn(g.GetPlayerIndex(p)+1, p, false)
 	return nil
 }
 
@@ -222,7 +222,7 @@ func (g *Game) EndAttack(p *Player) error {
 	g.table.clear()
 
 	defenderIndex, _ := g.GetDefender()
-	g.endTurn(defenderIndex, nil)
+	g.endTurn(defenderIndex, nil, false)
 
 	return nil
 }
@@ -325,7 +325,7 @@ func (g *Game) Abandon(player *Player) error {
 	g.Log.Add(NewAbandonEvent(player.snapshot(), cards))
 	if player.IsAttacker() || player.IsDefender() {
 		g.cancelTurn()
-		g.endTurn(g.GetPlayerIndex(player)+1, nil)
+		g.endTurn(g.GetPlayerIndex(player)+1, nil, true)
 	}
 
 	return nil

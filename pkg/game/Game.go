@@ -103,7 +103,9 @@ func (g *Game) winPlayer(p *Player) {
 }
 
 // checkGameOver checks if only one active player left
-func (g *Game) checkGameOver() {
+//
+// When the game ends because of an abandon, the last player wins instead of losing
+func (g *Game) checkGameOver(abandoned bool) {
 	// count number of active players. if <2 game is over
 	var activePlayers []*Player
 	for _, player := range g.players {
@@ -117,7 +119,11 @@ func (g *Game) checkGameOver() {
 
 	var loser *Player
 	if len(activePlayers) == 1 {
-		loser = activePlayers[0]
+		if abandoned {
+			g.winPlayer(activePlayers[0])
+		} else {
+			loser = activePlayers[0]
+		}
 	}
 	g.endGame(loser)
 
@@ -131,14 +137,15 @@ func (g *Game) checkGameOver() {
 // endTurn refills hands, detects winners and prepares next turn
 //
 // Next attacker is the first active player starting from the given seat index.
-// Skipping player, if any, is marked as missing the next turn
-func (g *Game) endTurn(nextAttackerIndex int, skipping *Player) {
+// Skipping player, if any, is marked as missing the next turn.
+// Abandoned is true when the turn ends because a player abandoned the game
+func (g *Game) endTurn(nextAttackerIndex int, skipping *Player, abandoned bool) {
 	for _, player := range g.players {
 		player.skipTurn = player == skipping
 	}
 	g.RefillUsers()
 	g.detectWinners()
-	g.checkGameOver()
+	g.checkGameOver(abandoned)
 	if g.over {
 		return
 	}
