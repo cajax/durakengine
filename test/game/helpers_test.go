@@ -25,6 +25,14 @@ func newTestGame(options map[string]game.Option, hands ...[]*game.Card) (*game.G
 	return game.NewGame(deck, players, options, true, false, game.Table{}, &game.BotManager{}), players
 }
 
+// newEmptyDeckGame is newTestGame with nothing left in deck, so players who run out of cards go out
+func newEmptyDeckGame(hands ...[]*game.Card) (*game.Game, []*game.Player) {
+	_, players := newTestGame(nil, hands...)
+	deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
+	deck.GetCard()
+	return game.NewGame(deck, players, map[string]game.Option{}, true, false, game.Table{}, &game.BotManager{}), players
+}
+
 func expectError(t *testing.T, err error, expected string) {
 	t.Helper()
 	if err == nil || err.Error() != expected {

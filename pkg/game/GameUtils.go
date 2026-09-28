@@ -251,13 +251,16 @@ func (g *Game) returnCard(p *Player, c *Card) {
 }
 
 // detectWinners finds players that have no Cards but still in game
+//
+// Players going out together share a place
 func (g *Game) detectWinners() {
+	place := g.nextWinnerPlace()
 	for _, player := range g.players {
 		if player.quitGame {
 			continue
 		}
 		if len(player.cards) == 0 {
-			g.winPlayer(player)
+			g.winPlayer(player, place)
 		}
 	}
 }
