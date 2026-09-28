@@ -371,6 +371,56 @@ func TestGameOverInDraw(t *testing.T) {
 	}
 }
 
+// expectNoRolesAfterGameOver checks that no player, nor the game over event, keeps a turn role
+func expectNoRolesAfterGameOver(t *testing.T, g *game.Game, players []*game.Player) {
+	t.Helper()
+	if !g.IsOver() {
+		t.Fatal("Expected game to be over")
+	}
+	for _, p := range players {
+		if p.IsAttacker() || p.IsDefender() || p.IsSkipTurn() {
+			t.Errorf("Expected %s to have no role after game over, got attacker=%v defender=%v skip=%v",
+				p.Name, p.IsAttacker(), p.IsDefender(), p.IsSkipTurn())
+		}
+	}
+	events := g.Log.Events[len(g.Log.Events)-1]
+	over, ok := events[len(events)-1].(*game.OverEvent)
+	if !ok {
+		t.Fatal("Expected game over event to be logged")
+	}
+	for _, p := range over.LastPlayers {
+		if p.IsAttacker() || p.IsDefender() || p.IsSkipTurn() {
+			t.Errorf("Expected game over event to show %s without a role", p.Name)
+		}
+	}
+}
+
+func TestGameOverClearsRoles(t *testing.T) {
+	players := []*game.Player{
+		game.NewPlayer("1", false, false, false, "Attacker", []*game.Card{card(game.Six, game.Clubs)}, false, true),
+		game.NewPlayer("2", false, false, false, "Defender", []*game.Card{card(game.Seven, game.Spades), card(game.Eight, game.Spades)}, true, false),
+	}
+	deck := game.NewDeck([]*game.Card{}, card(game.King, game.Hearts))
+	deck.GetCard()
+	g := game.NewGame(deck, players, map[string]game.Option{}, true, false, game.Table{}, nil)
+
+	// defender picks up the attacker's last card and loses
+	mustSucceed(t, g.Attack(players[0], players[0].GetCards()))
+	mustSucceed(t, g.Pickup(players[1]))
+
+	expectNoRolesAfterGameOver(t, g, players)
+}
+
+func TestGameOverByAbandonClearsRoles(t *testing.T) {
+	g, p := newTestGame(nil,
+		[]*game.Card{card(game.Six, game.Clubs)},
+		[]*game.Card{card(game.Seven, game.Clubs)},
+	)
+	mustSucceed(t, g.Abandon(p[1]))
+
+	expectNoRolesAfterGameOver(t, g, p)
+}
+
 func TestRedirectFailWithNoPlayerToRedirectTo(t *testing.T) {
 	g, p := newTestGame(withRedirect,
 		[]*game.Card{card(game.Six, game.Clubs)},
